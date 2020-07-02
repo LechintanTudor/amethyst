@@ -1,5 +1,10 @@
+use amethyst_core::ecs::prelude::*;
+use amethyst_window::ScreenDimensions;
 use glyph_brush::{HorizontalAlign, VerticalAlign};
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "profiler")]
+use thread_profiler::profile_scope;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ScaleMode {
@@ -78,4 +83,17 @@ pub enum Stretch {
         y_margin: f32,
         keep_aspect_ratio: bool,
     },
+}
+
+pub fn build_ui_transform_system() -> Box<dyn Schedulable> {
+    let transform_modified = BitSet::new();
+    let screen_size = (0_f32, 0_f32);
+
+    SystemBuilder::<()>::new("UiTransformSystem")
+        .read_resource::<ScreenDimensions>()
+        .build(move |_, _, _, _| {
+
+        });
+
+    todo!("finish UiTransformSystem")
 }

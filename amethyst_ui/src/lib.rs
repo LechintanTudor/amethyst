@@ -5,6 +5,10 @@
 
 pub use self::{
     bundle::UiBundle,
+    layout::{Anchor, ScaleMode, Stretch},
+    transform::UiTransform,
 };
 
 mod bundle;
+mod layout;
+mod transform;

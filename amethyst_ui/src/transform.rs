@@ -95,3 +95,42 @@ impl UiTransform {
         self.pixel_height
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inside_local() {
+        let transform = UiTransform::new(
+            "".to_string(),
+            Anchor::TopLeft,
+            Anchor::Middle,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+        );
+
+        assert!(transform.position_inside_local(-0.49, 0.20));
+        assert!(!transform.position_inside_local(-1.49, 1.20));
+    }
+
+    #[test]
+    fn inside_global() {
+        let transform = UiTransform::new(
+            "".to_string(),
+            Anchor::TopLeft,
+            Anchor::Middle,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+        );
+
+        assert!(transform.position_inside(-0.49, 0.20));
+        assert!(!transform.position_inside(-1.49, 1.20));
+    }
+}

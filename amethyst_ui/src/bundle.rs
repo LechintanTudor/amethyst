@@ -29,11 +29,12 @@ where T: BindingTypes
 {
     fn build(self, world: &mut World, resources: &mut Resources, builder: &mut DispatcherBuilder<'_>) -> Result<(), Error> {
         builder.add_system(Stage::Logic, systems::build_ui_mouse_system::<T>);
+        builder.add_system(Stage::Logic, systems::build_font_asset_processor_system);
 
         todo!("loader");
         todo!("transform");
         // todo!("mouse");
-        todo!("processor -> font asset");
+        // todo!("processor -> font asset");
         todo!("cache selection order");
         todo!("selection mouse");
         todo!("selection keyboard");

@@ -56,7 +56,7 @@ impl UiEvent {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Interactable;
 
-pub fn build_ui_mouse_system<T>() -> Box<dyn Schedulable>
+pub fn build_ui_mouse_system<T>(_world: &mut World, _resources: &mut Resources) -> Box<dyn Schedulable>
 where T: BindingTypes
 {
     let mut mouse_was_down = false;

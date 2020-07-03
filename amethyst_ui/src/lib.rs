@@ -12,4 +12,7 @@ pub use self::{
 mod bundle;
 mod event;
 mod layout;
+mod systems {
+    pub use super::event::build_ui_mouse_system;
+}
 mod transform;

@@ -69,7 +69,7 @@ pub use amethyst_assets as assets;
 #[cfg(feature = "audio")]
 pub use amethyst_audio as audio;
 pub use amethyst_config as config;
-pub use amethyst_controls as controls;
+//pub use amethyst_controls as controls;
 pub use amethyst_core as core;
 pub use amethyst_derive as derive;
 pub use amethyst_error as error;

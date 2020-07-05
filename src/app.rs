@@ -14,7 +14,7 @@ use thread_profiler::{profile_scope, register_thread_with_profiler, write_profil
 
 use crate::{
     assets::{Loader, Source},
-    callback_queue::CallbackQueue,
+    //callback_queue::CallbackQueue,
     core::{
         frame_limiter::{FrameLimiter, FrameRateLimitConfig, FrameRateLimitStrategy},
         shrev::{EventChannel, ReaderId},
@@ -335,6 +335,7 @@ where
             profile_scope!("run_callback_queue");
             let world = &mut self.world;
             let resources = &mut self.resources;
+            /*
             let receiver = resources
                 .get_mut::<CallbackQueue>()
                 .unwrap()
@@ -343,6 +344,7 @@ where
             while let Ok(func) = receiver.try_recv() {
                 func(world, resources);
             }
+            */
         }
 
         {
@@ -576,7 +578,7 @@ where
         resources.insert(FrameLimiter::default());
         resources.insert(Stopwatch::default());
         resources.insert(Time::default());
-        resources.insert(CallbackQueue::default());
+        //resources.insert(CallbackQueue::default());
 
         Ok(Self {
             initial_state,

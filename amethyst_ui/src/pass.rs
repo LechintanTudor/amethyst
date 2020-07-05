@@ -1,9 +1,13 @@
-use amethyst_assets::{Asset, AssetStorage, Handle};
+use amethyst_assets::{AssetStorage, Handle, Loader};
+use amethyst_core::{
+    ecs::prelude::*,
+    dispatcher::DispatcherBuilder,
+};
 use amethyst_error::Error;
 use amethyst_rendy::{
     batch::OrderedOneLevelBatch,
     bundle::{RenderOrder, RenderPlan, RenderPlugin, Target},
-    palette,
+    palette::Srgba,
     pipeline::{PipelineDescBuilder, PipelinesBuilder},
     rendy::{
         command::{QueueId, RenderPassEncoder},
@@ -30,6 +34,7 @@ use amethyst_rendy::{
     ChangeDetection, SpriteSheet,
 };
 use glsl_layout::*;
+use specs::hibitset::BitSet;
 
 #[cfg(feature = "profiler")]
 use thread_profiler::profile_scope;
@@ -60,7 +65,7 @@ impl RenderUi {
     }
 }
 
-impl<B> RenderPlugin for RenderUi
+impl<B> RenderPlugin<B> for RenderUi
 where B: Backend
 {
     fn on_build(
@@ -85,6 +90,7 @@ where B: Backend
             ctx.add(RenderOrder::Overlay, DrawUiDesc::new().builder());
             Ok(())
         });
+        Ok(())
     }
 }
 
@@ -108,10 +114,10 @@ where B: Backend
         aux: &GraphAuxData,
         framebuffer_width: u32,
         framebuffer_height: u32,
-        subpass: gfx_hal::pass::Subpass<'_, B>,
+        subpass: hal::pass::Subpass<'_, B>,
         buffers: Vec<NodeBuffer>,
         images: Vec<NodeImage>
-    ) -> Result<Box<dyn RenderGroup<B, T>>, failure::Error>
+    ) -> Result<Box<dyn RenderGroup<B, GraphAuxData>>, failure::Error>
     {
         #[cfg(feature = "profiler")]
         profile_scope!("build");
@@ -120,7 +126,33 @@ where B: Backend
         let textures = TextureSub::new(factory)?;
         let vertex = DynamicVertexBuffer::new();
 
-        todo!()
+        let (pipeline, pipeline_layout) = build_ui_pipeline(
+            factory,
+            subpass,
+            framebuffer_width,
+            framebuffer_height,
+            vec![env.raw_layout(), textures.raw_layout()],
+        )?;
+
+        let loader = aux.resources.get::<Loader>().unwrap();
+        let texture_storage = aux.resources.get::<AssetStorage<Texture>>().unwrap();
+        let white_texture = loader.load_from_data(
+            load_from_srgba(Srgba::new(1.0, 1.0, 1.0, 1.0)).into(),
+            (),
+            &texture_storage
+        );
+
+        Ok(Box::new(DrawUi::<B> {
+            pipeline,
+            pipeline_layout,
+            env,
+            textures,
+            vertex,
+            change: ChangeDetection::default(),
+            cached_draw_order: CachedDrawOrder::default(),
+            batches: OrderedOneLevelBatch::default(),
+            white_texture,
+        }))
     }
 }
 
@@ -146,8 +178,15 @@ impl AsVertex for UiArgs {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, AsStd140)]
+struct UiViewArgs {
+    inverse_window_size: vec2,
+}
+
 #[derive(Debug)]
-pub struct DrawUi<B: Backend> {
+pub struct DrawUi<B>
+where B: Backend
+{
     pipeline: B::GraphicsPipeline,
     pipeline_layout: B::PipelineLayout,
     env: DynamicUniform<B, UiViewArgs>,
@@ -156,7 +195,51 @@ pub struct DrawUi<B: Backend> {
     batches: OrderedOneLevelBatch<TextureId, UiArgs>,
     change: ChangeDetection,
     cached_draw_order: CachedDrawOrder,
-    white_tex: Handle<Texture>,
+    white_texture: Handle<Texture>,
+}
+
+impl<B> RenderGroup<B, GraphAuxData> for DrawUi<B>
+where B: Backend
+{
+    fn prepare(
+        &mut self,
+        factory: &Factory<B>,
+        queue: QueueId,
+        index: usize,
+        subpass: hal::pass::Subpass<'_, B>,
+        aux: &GraphAuxData
+    ) -> PrepareResult
+    {
+        todo!()
+    }
+
+    fn draw_inline(
+        &mut self,
+        mut encoder: RenderPassEncoder<'_, B>,
+        index: usize, subpass:
+        hal::pass::Subpass<'_, B>,
+        aux: &GraphAuxData)
+    {
+        if self.batches.count() > 0 {
+            encoder.bind_graphics_pipeline(&self.pipeline);
+            self.env.bind(index, &self.pipeline_layout, 0, &mut encoder);
+            self.vertex.bind(index, 0, 0, &mut encoder);
+
+            for (&texture, range) in self.batches.iter() {
+                self.textures.bind(&self.pipeline_layout, 1, texture, &mut encoder);
+                unsafe {
+                    encoder.draw(0..4, range);
+                }
+            }
+        }
+    }
+
+    fn dispose(self: Box<Self>, factory: &mut Factory<B>, aux: &GraphAuxData) {
+        unsafe {
+            factory.device().destroy_graphics_pipeline(self.pipeline);
+            factory.device().destroy_pipeline_layout(self.pipeline_layout);
+        }
+    }
 }
 
 fn build_ui_pipeline<B>(
@@ -207,4 +290,10 @@ where B: Backend
         }
         Ok(mut pipes) => Ok((pipes.remove(0), pipeline_layout)),
     }
+}
+
+#[derive(Clone, Default, Debug)]
+struct CachedDrawOrder {
+    cached: BitSet,
+    cache: Vec<(f32, Entity)>,
 }

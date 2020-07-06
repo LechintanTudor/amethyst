@@ -6,7 +6,9 @@
 pub use self::{
     bundle::UiBundle,
     format::{FontAsset, TtfFormat},
+    image::UiImage,
     layout::{Anchor, ScaleMode, Stretch},
+    pass::RenderUi,
     selection::{Selectable, Selected},
     transform::UiTransform,
 };
@@ -14,6 +16,7 @@ pub use self::{
 mod bundle;
 mod event;
 mod format;
+mod image;
 mod layout;
 mod pass;
 mod selection;

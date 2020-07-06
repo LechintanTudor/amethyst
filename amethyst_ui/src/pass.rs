@@ -1,5 +1,7 @@
+use crate::{UiImage, UiTransform};
 use amethyst_assets::{AssetStorage, Handle, Loader};
 use amethyst_core::{
+    Hidden, HiddenPropagate,
     ecs::prelude::*,
     dispatcher::DispatcherBuilder,
 };
@@ -33,6 +35,7 @@ use amethyst_rendy::{
     types::{Backend, Texture},
     ChangeDetection, SpriteSheet,
 };
+use amethyst_window::ScreenDimensions;
 use glsl_layout::*;
 use specs::hibitset::BitSet;
 
@@ -41,13 +44,13 @@ use thread_profiler::profile_scope;
 
 lazy_static::lazy_static! {
     static ref UI_VERTEX: SpirvShader = SpirvShader::from_bytes(
-        include_bytes!("../compiled/ui.vert.spv"),
+        include_bytes!("../compiled/ui2.vert.spv"),
         ShaderStageFlags::VERTEX,
         "main",
     ).unwrap();
 
     static ref UI_FRAGMENT: SpirvShader = SpirvShader::from_bytes(
-        include_bytes!("../compiled/ui.frag.spv"),
+        include_bytes!("../compiled/ui2.frag.spv"),
         ShaderStageFlags::FRAGMENT,
         "main",
     ).unwrap();
@@ -87,7 +90,7 @@ where B: Backend
     ) -> Result<(), Error>
     {
         plan.extend_target(self.target, |ctx| {
-            ctx.add(RenderOrder::Overlay, DrawUiDesc::new().builder());
+            ctx.add(RenderOrder::Overlay, DrawUiDesc::new().builder())?;
             Ok(())
         });
         Ok(())
@@ -156,24 +159,20 @@ where B: Backend
     }
 }
 
-#[repr(C, align(4))]
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, AsStd140)]
-pub(crate) struct UiArgs {
-    pub(crate) coords: vec2,
-    pub(crate) dimensions: vec2,
-    pub(crate) tex_coord_bounds: vec4,
-    pub(crate) color: vec4,
-    pub(crate) color_bias: vec4,
+#[repr(C)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, AsStd140)]
+struct UiArgs {
+    position: vec2,
+    dimensions: vec2,
+    color: vec4,
 }
 
 impl AsVertex for UiArgs {
     fn vertex() -> VertexFormat {
         VertexFormat::new((
-            (Format::Rg32Sfloat, "coords"),
+            (Format::Rg32Sfloat, "position"),
             (Format::Rg32Sfloat, "dimensions"),
-            (Format::Rgba32Sfloat, "tex_coord_bounds"),
             (Format::Rgba32Sfloat, "color"),
-            (Format::Rgba32Sfloat, "color_bias"),
         ))
     }
 }
@@ -210,7 +209,60 @@ where B: Backend
         aux: &GraphAuxData
     ) -> PrepareResult
     {
-        todo!()
+        // View args
+        let screen_dimensions = aux.resources.get::<ScreenDimensions>().unwrap();
+
+        let view_args = UiViewArgs {
+            inverse_window_size: [
+                1.0 / screen_dimensions.width() as f32,
+                1.0 / screen_dimensions.height() as f32,
+            ].into(),
+        };
+        self.env.write(factory, index, view_args.std140());
+
+        // Vertex buffer
+        self.batches.swap_clear();
+
+        if let Some((white_texture_id, _)) = self.textures.insert(
+            factory,
+            aux.resources,
+            &self.white_texture,
+            hal::image::Layout::ShaderReadOnlyOptimal,
+        )
+        {
+            let widget_query = <(Read<UiTransform>,)>::query()
+                .filter(!component::<Hidden>() & !component::<HiddenPropagate>());
+
+            for (entity, (transform,)) in widget_query.iter_entities(aux.world) {
+                let tint = aux.world.get_component::<Tint>(entity).map(|t| t.as_ref().clone());
+
+                if let Some(image) = aux.world.get_component::<UiImage>(entity) {
+                    render_image(
+                        factory,
+                        &transform,
+                        &image,
+                        tint,
+                        white_texture_id,
+                        &mut self.textures,
+                        &mut self.batches,
+                    );
+                }
+            }
+
+            self.textures.maintain(factory, aux.resources);
+
+            self.vertex.write(
+                factory,
+                index,
+                self.batches.count() as u64,
+                Some(self.batches.data()),
+            );
+
+            PrepareResult::DrawRecord
+        } else {
+            self.textures.maintain(factory, aux.resources);
+            PrepareResult::DrawRecord
+        }
     }
 
     fn draw_inline(
@@ -290,6 +342,60 @@ where B: Backend
         }
         Ok(mut pipes) => Ok((pipes.remove(0), pipeline_layout)),
     }
+}
+
+fn render_image<B>(
+    factory: &Factory<B>,
+    transform: &UiTransform,
+    image: &UiImage,
+    tint: Option<Tint>,
+    white_texture_id: TextureId,
+    textures: &mut TextureSub<B>,
+    batches: &mut OrderedOneLevelBatch<TextureId, UiArgs>,
+) -> bool
+where B: Backend
+{
+    let color = mul_blend(image_color(image), tint_color(tint));
+
+    match image {
+        UiImage::SolidColor(_) => {
+            let args = UiArgs {
+                position: [transform.pixel_x, transform.pixel_y].into(),
+                dimensions: [transform.pixel_width, transform.pixel_height].into(),
+                color: color.into(),
+            };
+
+            batches.insert(white_texture_id, Some(args));
+            false
+        }
+        _ => false,
+    }
+}
+
+// Returns the `UiImage` color as linear RGBA array
+fn image_color(image: &UiImage) -> [f32; 4] {
+    match image {
+        UiImage::SolidColor(color) => {
+            let (r, g, b, a) = color.into_linear().into_components();
+            [r, g, b, a]
+        }
+        _ => [1.0, 1.0, 1.0, 1.0],
+    }
+}
+
+// Returns the `Tint` color as linear RGBA array
+fn tint_color(tint: Option<Tint>) -> [f32; 4] {
+    match tint {
+        Some(Tint(color)) => {
+            let (r, g, b, a) = color.into_linear().into_components();
+            [r, g, b, a]
+        }
+        None => [1.0, 1.0, 1.0, 1.0]
+    }
+}
+
+fn mul_blend(color1: [f32; 4], color2: [f32; 4]) -> [f32; 4] {
+    [color1[0] * color2[0], color1[1] * color2[1], color1[2] * color2[2], color1[3] * color2[3]]
 }
 
 #[derive(Clone, Default, Debug)]

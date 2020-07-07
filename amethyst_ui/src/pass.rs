@@ -211,6 +211,57 @@ where B: Backend
         aux: &GraphAuxData
     ) -> PrepareResult
     {
+        let mut changed = false;
+
+        let white_texture_id = {
+            if let Some((white_texture_id, white_texture_changed)) = self.textures.insert(
+                factory,
+                aux.resources,
+                &self.white_texture,
+                hal::image::Layout::ShaderReadOnlyOptimal,
+            ) {
+                changed = changed || white_texture_changed;
+                white_texture_id
+            } else {
+                self.textures.maintain(factory, aux.resources);
+                return PrepareResult::DrawReuse;
+            }
+        };
+
+        // Batches
+        self.batches.swap_clear();
+
+        let widget_query = <(Read<UiTransform>,)>::query()
+            .filter(!component::<Hidden>() & !component::<HiddenPropagate>());
+
+        for (entity, (transform,)) in widget_query.iter_entities(aux.world) {
+            let tint = aux.world.get_component::<Tint>(entity).map(|t| t.as_ref().clone());
+
+            if let Some(image) = aux.world.get_component::<UiImage>(entity) {
+                let image_changed = render_image(
+                    factory,
+                    &transform,
+                    &image,
+                    tint,
+                    white_texture_id,
+                    &mut self.textures,
+                    &mut self.batches,
+                    aux.resources,
+                );
+
+                changed = changed || image_changed;
+            }
+        }
+
+        self.textures.maintain(factory, aux.resources);
+
+        self.vertex.write(
+            factory,
+            index,
+            self.batches.count() as u64,
+            Some(self.batches.data()),
+        );
+
         // View args
         let screen_dimensions = aux.resources.get::<ScreenDimensions>().unwrap();
 
@@ -220,51 +271,11 @@ where B: Backend
                 1.0 / screen_dimensions.height() as f32,
             ].into(),
         };
-        self.env.write(factory, index, view_args.std140());
 
-        // Vertex buffer
-        self.batches.swap_clear();
+        let env_changed = self.env.write(factory, index, view_args.std140());
+        changed = changed || env_changed;
 
-        if let Some((white_texture_id, _)) = self.textures.insert(
-            factory,
-            aux.resources,
-            &self.white_texture,
-            hal::image::Layout::ShaderReadOnlyOptimal,
-        )
-        {
-            let widget_query = <(Read<UiTransform>,)>::query()
-                .filter(!component::<Hidden>() & !component::<HiddenPropagate>());
-
-            for (entity, (transform,)) in widget_query.iter_entities(aux.world) {
-                let tint = aux.world.get_component::<Tint>(entity).map(|t| t.as_ref().clone());
-
-                if let Some(image) = aux.world.get_component::<UiImage>(entity) {
-                    render_image(
-                        factory,
-                        &transform,
-                        &image,
-                        tint,
-                        white_texture_id,
-                        &mut self.textures,
-                        &mut self.batches,
-                    );
-                }
-            }
-
-            self.textures.maintain(factory, aux.resources);
-
-            self.vertex.write(
-                factory,
-                index,
-                self.batches.count() as u64,
-                Some(self.batches.data()),
-            );
-
-            PrepareResult::DrawRecord
-        } else {
-            self.textures.maintain(factory, aux.resources);
-            PrepareResult::DrawRecord
-        }
+        self.change.prepare_result(index, changed)
     }
 
     fn draw_inline(
@@ -354,6 +365,7 @@ fn render_image<B>(
     white_texture_id: TextureId,
     textures: &mut TextureSub<B>,
     batches: &mut OrderedOneLevelBatch<TextureId, UiArgs>,
+    resources: &Resources,
 ) -> bool
 where B: Backend
 {
@@ -370,6 +382,26 @@ where B: Backend
 
             batches.insert(white_texture_id, Some(args));
             false
+        }
+        UiImage::Texture(texture) => {
+            if let Some((texture_id, changed)) = textures.insert(
+                factory,
+                resources,
+                texture,
+                hal::image::Layout::ShaderReadOnlyOptimal,
+            ) {
+                let args = UiArgs {
+                    position: [transform.pixel_x, transform.pixel_y].into(),
+                    dimensions: [transform.pixel_width, transform.pixel_height].into(),
+                    color: color.into(),
+                    tex_coords_bounds: [0.0_f32, 0.0, 1.0, 1.0].into(),
+                };
+
+                batches.insert(texture_id, Some(args));
+                changed
+            } else {
+                false
+            }
         }
         _ => false,
     }

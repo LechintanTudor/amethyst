@@ -165,6 +165,7 @@ struct UiArgs {
     position: vec2,
     dimensions: vec2,
     color: vec4,
+    tex_coords_bounds: vec4,
 }
 
 impl AsVertex for UiArgs {
@@ -173,6 +174,7 @@ impl AsVertex for UiArgs {
             (Format::Rg32Sfloat, "position"),
             (Format::Rg32Sfloat, "dimensions"),
             (Format::Rgba32Sfloat, "color"),
+            (Format::Rgba32Sfloat, "tex_coords_bounds"),
         ))
     }
 }
@@ -363,6 +365,7 @@ where B: Backend
                 position: [transform.pixel_x, transform.pixel_y].into(),
                 dimensions: [transform.pixel_width, transform.pixel_height].into(),
                 color: color.into(),
+                tex_coords_bounds: [0.0_f32, 0.0, 1.0, 1.0].into(),
             };
 
             batches.insert(white_texture_id, Some(args));

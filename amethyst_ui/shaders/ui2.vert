@@ -25,5 +25,5 @@ void main() {
 
 	gl_Position = vec4(final_position, 0.0, 1.0);
     frag_color = color;
-    frag_tex_coords = mix(tex_coords_bounds.xy, tex_coords_bounds.wz, POSITIONS[gl_VertexIndex] + vec2(0.5));
+    frag_tex_coords = mix(tex_coords_bounds.xy, tex_coords_bounds.zw, POSITIONS[gl_VertexIndex] + vec2(0.5));
 }

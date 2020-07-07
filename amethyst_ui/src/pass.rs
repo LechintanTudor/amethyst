@@ -372,17 +372,6 @@ where B: Backend
     let color = mul_blend(image_color(image), tint_color(tint));
 
     match image {
-        UiImage::SolidColor(_) => {
-            let args = UiArgs {
-                position: [transform.pixel_x, transform.pixel_y].into(),
-                dimensions: [transform.pixel_width, transform.pixel_height].into(),
-                color: color.into(),
-                tex_coords_bounds: [0.0_f32, 0.0, 1.0, 1.0].into(),
-            };
-
-            batches.insert(white_texture_id, Some(args));
-            false
-        }
         UiImage::Texture(texture) => {
             if let Some((texture_id, changed)) = textures.insert(
                 factory,
@@ -402,6 +391,70 @@ where B: Backend
             } else {
                 false
             }
+        }
+        UiImage::PartialTexture { texture, left, top, right, bottom } => {
+            if let Some((texture_id, changed)) = textures.insert(
+                factory,
+                resources,
+                texture,
+                hal::image::Layout::ShaderReadOnlyOptimal,
+            ) {
+                let args = UiArgs {
+                    position: [transform.pixel_x, transform.pixel_y].into(),
+                    dimensions: [transform.pixel_width, transform.pixel_height].into(),
+                    color: color.into(),
+                    tex_coords_bounds: [*left, *top, *right, *bottom].into(),
+                };
+
+                batches.insert(texture_id, Some(args));
+                changed
+            } else {
+                false
+            }
+        }
+        UiImage::Sprite(sprite_render) => {
+            let sprite_sheet_storage = resources.get::<AssetStorage<SpriteSheet>>().unwrap();
+
+            if let Some(sprite_sheet) = sprite_sheet_storage.get(&sprite_render.sprite_sheet) {
+                if let Some((texture_id, changed)) = textures.insert(
+                    factory,
+                    resources,
+                    &sprite_sheet.texture,
+                    hal::image::Layout::ShaderReadOnlyOptimal,
+                ) {
+                    let tex_coords = &sprite_sheet.sprites[sprite_render.sprite_number].tex_coords;
+
+                    let args = UiArgs {
+                        position: [transform.pixel_x, transform.pixel_y].into(),
+                        dimensions: [transform.pixel_width, transform.pixel_height].into(),
+                        color: color.into(),
+                        tex_coords_bounds: [
+                            tex_coords.left,
+                            tex_coords.top,
+                            tex_coords.right,
+                            tex_coords.bottom,
+                        ].into(),
+                    };
+
+                    batches.insert(texture_id, Some(args));
+                    changed
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        }
+        UiImage::SolidColor(_) => {
+            let args = UiArgs {
+                position: [transform.pixel_x, transform.pixel_y].into(),
+                dimensions: [transform.pixel_width, transform.pixel_height].into(),
+                color: color.into(),
+                tex_coords_bounds: [0.0_f32, 0.0, 1.0, 1.0].into(),
+            };
+
+            batches.insert(white_texture_id, Some(args));
+            false
         }
         _ => false,
     }

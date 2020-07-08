@@ -5,6 +5,7 @@
 
 pub use self::{
     bundle::UiBundle,
+    event::UiEvent,
     format::{FontAsset, TtfFormat},
     image::UiImage,
     layout::{Anchor, ScaleMode, Stretch},

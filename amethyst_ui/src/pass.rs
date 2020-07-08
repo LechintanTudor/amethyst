@@ -81,7 +81,7 @@ where B: Backend
         builder: &mut DispatcherBuilder<'_>
     ) -> Result<(), Error>
     {
-        // builder.add_system(Stage::Logic, systems::build_ui_glyphs_system::<B>);
+        builder.add_system(Stage::Logic, systems::build_ui_glyphs_system::<B>);
         Ok(())
     }
 

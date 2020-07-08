@@ -24,4 +24,5 @@ mod pass;
 mod selection;
 mod selection_order_cache;
 mod systems;
+mod text;
 mod transform;

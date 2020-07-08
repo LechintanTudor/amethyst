@@ -31,6 +31,7 @@ where T: BindingTypes
         builder.add_system(Stage::Logic, systems::build_ui_mouse_system::<T>);
         builder.add_system(Stage::Logic, systems::build_font_asset_processor_system);
 
+        /*
         todo!("loader");
         todo!("transform");
         // todo!("mouse");
@@ -48,5 +49,8 @@ where T: BindingTypes
         todo!("sound retrigger");
         todo!("blink");
         todo!()
+        */
+
+        Ok(())
     }
 }

@@ -1,9 +1,12 @@
-use crate::{UiImage, UiTransform};
+use crate::{
+    UiImage, UiTransform,
+    systems,
+};
 use amethyst_assets::{AssetStorage, Handle, Loader};
 use amethyst_core::{
     Hidden, HiddenPropagate,
+    dispatcher::{DispatcherBuilder, Stage},
     ecs::prelude::*,
-    dispatcher::DispatcherBuilder,
 };
 use amethyst_error::Error;
 use amethyst_rendy::{
@@ -75,9 +78,10 @@ where B: Backend
         &mut self,
         _world: &mut World,
         _resources: &mut Resources,
-        _builder: &mut DispatcherBuilder<'_>
+        builder: &mut DispatcherBuilder<'_>
     ) -> Result<(), Error>
     {
+        // builder.add_system(Stage::Logic, systems::build_ui_glyphs_system::<B>);
         Ok(())
     }
 
@@ -161,11 +165,11 @@ where B: Backend
 
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, AsStd140)]
-struct UiArgs {
-    position: vec2,
-    dimensions: vec2,
-    color: vec4,
-    tex_coords_bounds: vec4,
+pub(crate) struct UiArgs {
+    pub(crate) position: vec2,
+    pub(crate) dimensions: vec2,
+    pub(crate) color: vec4,
+    pub(crate) tex_coords_bounds: vec4,
 }
 
 impl AsVertex for UiArgs {

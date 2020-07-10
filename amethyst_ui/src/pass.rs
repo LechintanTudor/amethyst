@@ -1,5 +1,6 @@
 use crate::{
     UiImage, UiTransform,
+    glyphs::{UiGlyphs, UiGlyphsResource},
     systems,
 };
 use amethyst_assets::{AssetStorage, Handle, Loader};
@@ -216,32 +217,47 @@ where B: Backend
     ) -> PrepareResult
     {
         let mut changed = false;
+        let glyph_texture = aux.resources.get::<UiGlyphsResource>()
+            .unwrap()
+            .glyph_texture()
+            .cloned();
 
-        let white_texture_id = {
-            if let Some((white_texture_id, white_texture_changed)) = self.textures.insert(
+        let (white_texture_id, glyph_texture_id) = if let (
+            Some((white_texture_id, white_texture_changed)),
+            Some((glyph_texture_id, glyph_texture_changed)),
+        ) = (
+            self.textures.insert(
                 factory,
                 aux.resources,
                 &self.white_texture,
                 hal::image::Layout::ShaderReadOnlyOptimal,
-            ) {
-                changed = changed || white_texture_changed;
-                white_texture_id
-            } else {
-                self.textures.maintain(factory, aux.resources);
-                return PrepareResult::DrawReuse;
-            }
+            ),
+            glyph_texture.and_then(|texture| {
+                self.textures.insert(
+                    factory,
+                    aux.resources,
+                    &texture,
+                    hal::image::Layout::General,
+                )
+            }),
+        ) {
+            changed = changed || white_texture_changed || glyph_texture_changed;
+            (white_texture_id, glyph_texture_id)
+        } else {
+            self.textures.maintain(factory, aux.resources);
+            return PrepareResult::DrawReuse;
         };
 
         // Batches
         self.batches.swap_clear();
 
-        let widget_query = <(Read<UiTransform>,)>::query()
+        let widget_query = <(Read<UiTransform>, TryRead<UiImage>, TryRead<UiGlyphs>)>::query()
             .filter(!component::<Hidden>() & !component::<HiddenPropagate>());
 
-        for (entity, (transform,)) in widget_query.iter_entities(aux.world) {
+        for (entity, (transform, image, glyphs)) in widget_query.iter_entities(aux.world) {
             let tint = aux.world.get_component::<Tint>(entity).map(|t| t.as_ref().clone());
 
-            if let Some(image) = aux.world.get_component::<UiImage>(entity) {
+            if let Some(image) = image {
                 let image_changed = render_image(
                     factory,
                     &transform,
@@ -254,6 +270,12 @@ where B: Backend
                 );
 
                 changed = changed || image_changed;
+            }
+
+            if let Some(glyph_data) = glyphs {
+                if !glyph_data.vertices.is_empty() {
+                    self.batches.insert(glyph_texture_id, glyph_data.vertices.iter().cloned());
+                }
             }
         }
 

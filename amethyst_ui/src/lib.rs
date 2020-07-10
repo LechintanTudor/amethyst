@@ -11,6 +11,7 @@ pub use self::{
     layout::{Anchor, ScaleMode, Stretch},
     pass::RenderUi,
     selection::{Selectable, Selected},
+    text::{LineMode, UiText, TextEditing},
     transform::UiTransform,
 };
 

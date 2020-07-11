@@ -2,6 +2,7 @@ use crate::{
     FontAsset, LineMode, TextEditing, UiText, UiTransform,
     pass::UiArgs,
     text::CachedGlyph,
+    utils,
 };
 use amethyst_assets::{AssetStorage, Handle};
 use amethyst_core::{
@@ -47,8 +48,8 @@ impl UiGlyphsResource {
 
 #[derive(Clone, Debug)]
 pub struct UiGlyphs {
-    pub(crate) selected_vertices: Vec<UiArgs>,
     pub(crate) vertices: Vec<UiArgs>,
+    pub(crate) selected_vertices: Vec<UiArgs>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -136,13 +137,12 @@ where B: Backend
                 }
 
                 if let (Some(font_id), Some(font_asset)) = (font_lookup.font_id(), font_asset) {
-                    let tint: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
                     let scale = Scale::uniform(ui_text.font_size);
                     let text = vec![
                         SectionText {
                             text: &ui_text.text,
                             scale,
-                            color: tint,
+                            color: utils::srgba_to_lin_rgba_array(ui_text.color),
                             font_id,
                         },
                     ];

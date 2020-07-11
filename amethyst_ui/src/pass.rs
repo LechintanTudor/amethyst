@@ -2,6 +2,7 @@ use crate::{
     UiImage, UiTransform,
     glyphs::{UiGlyphs, UiGlyphsResource},
     systems,
+    utils,
 };
 use amethyst_assets::{AssetStorage, Handle, Loader};
 use amethyst_core::{
@@ -251,11 +252,11 @@ where B: Backend
         // Batches
         self.batches.swap_clear();
 
-        let widget_query = <(Read<UiTransform>, TryRead<UiImage>, TryRead<UiGlyphs>)>::query()
+        let widget_query = <(Read<UiTransform>, TryRead<UiImage>, TryRead<Tint>, TryRead<UiGlyphs>)>::query()
             .filter(!component::<Hidden>() & !component::<HiddenPropagate>());
 
-        for (entity, (transform, image, glyphs)) in widget_query.iter_entities(aux.world) {
-            let tint = aux.world.get_component::<Tint>(entity).map(|t| t.as_ref().clone());
+        for (entity, (transform, image, tint, glyphs)) in widget_query.iter_entities(aux.world) {
+            let tint = tint.map(|t| t.as_ref().clone());
 
             if let Some(image) = image {
                 let image_changed = render_image(
@@ -395,7 +396,7 @@ fn render_image<B>(
 ) -> bool
 where B: Backend
 {
-    let color = mul_blend(image_color(image), tint_color(tint));
+    let color = utils::mul_blend_lin_rgba_arrays(image_color(image), tint_color(tint));
 
     match image {
         UiImage::Texture(texture) => {
@@ -506,10 +507,6 @@ fn tint_color(tint: Option<Tint>) -> [f32; 4] {
         }
         None => [1.0, 1.0, 1.0, 1.0]
     }
-}
-
-fn mul_blend(color1: [f32; 4], color2: [f32; 4]) -> [f32; 4] {
-    [color1[0] * color2[0], color1[1] * color2[1], color1[2] * color2[2], color1[3] * color2[3]]
 }
 
 #[derive(Clone, Default, Debug)]

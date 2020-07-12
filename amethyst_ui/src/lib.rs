@@ -15,6 +15,7 @@ pub use self::{
     transform::UiTransform,
 };
 
+mod button;
 mod bundle;
 mod event;
 mod format;

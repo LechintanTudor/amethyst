@@ -108,13 +108,13 @@ where B: Backend
             let (factory, queue, texture_storage, font_storage, glyphs_res) = resources;
             let (text_query, glyph_query, glyph_query2) = queries;
 
-            let glyph_texture = glyphs_res.glyph_texture.get_or_insert_with(|| {
+            let glyph_texture_handle = glyphs_res.glyph_texture.get_or_insert_with(|| {
                 let (width, height) = glyph_brush.texture_dimensions();
                 texture_storage.insert(create_glyph_texture(factory, **queue, width, height))
             });
 
-            let glyph_texture = texture_storage
-                .get(glyph_texture)
+            let mut glyph_texture = texture_storage
+                .get(glyph_texture_handle)
                 .and_then(B::unwrap_texture)
                 .expect("Glyph texture is created synchronously");
 
@@ -345,7 +345,28 @@ where B: Backend
 
                         break;
                     },
-                    _ => { break; },
+                    Ok(BrushAction::ReDraw) => {
+                        // TODO: Update cursor position
+                        break;
+                    }
+                    Err(BrushError::TextureTooSmall { suggested: (width, height) }) => {
+                        texture_storage.replace(
+                            glyph_texture_handle,
+                            create_glyph_texture(
+                                factory,
+                                **queue,
+                                width,
+                                height,
+                            ),
+                        );
+
+                        glyph_texture = texture_storage
+                            .get(glyph_texture_handle)
+                            .and_then(B::unwrap_texture)
+                            .unwrap();
+
+                        glyph_brush.resize_texture(width, height);
+                    }
                 }
             }
         })

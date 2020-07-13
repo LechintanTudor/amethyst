@@ -21,9 +21,9 @@ pub enum LineMode {
 #[derive(Clone)]
 pub struct UiText {
     pub text: String,
+    pub font: Handle<FontAsset>,
     pub font_size: f32,
     pub color: Srgba,
-    pub font: Handle<FontAsset>,
     pub password: bool,
     pub line_mode: LineMode,
     pub align: Anchor,

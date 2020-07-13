@@ -225,5 +225,5 @@ fn modify_transform_bounds(
 
     let (offset_x, offset_y) = transform.pivot.normalized_offset();
     transform.pixel_x += transform.pixel_width * -offset_x;
-    transform.pixel_y += transform.pixel_height * offset_y;
+    transform.pixel_y += transform.pixel_height * -offset_y;
 }

@@ -42,7 +42,6 @@ use amethyst_rendy::{
 };
 use amethyst_window::ScreenDimensions;
 use glsl_layout::*;
-use specs::hibitset::BitSet;
 
 #[cfg(feature = "profiler")]
 use thread_profiler::profile_scope;
@@ -83,7 +82,7 @@ where B: Backend
         builder: &mut DispatcherBuilder<'_>
     ) -> Result<(), Error>
     {
-        builder.add_system(Stage::Logic, systems::build_ui_glyphs_system::<B>);
+        builder.add_system(Stage::Render, systems::build_ui_glyphs_system::<B>);
         Ok(())
     }
 

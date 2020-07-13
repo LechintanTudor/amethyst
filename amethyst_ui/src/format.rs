@@ -1,4 +1,5 @@
 use amethyst_assets::{Asset, Format, ProcessableAsset, ProcessingState};
+use amethyst_core::ecs::prelude::*;
 use amethyst_error::{format_err, Error, ResultExt};
 use glyph_brush::rusttype::Font;
 use serde::{Deserialize, Serialize};
@@ -37,4 +38,12 @@ impl Format<FontData> for TtfFormat {
             .map(FontData)
             .with_context(|_| format_err!("Font parsing error"))
     }
+}
+
+pub fn build_font_asset_processor_system(
+    world: &mut World,
+    resources: &mut Resources
+) -> Box<dyn Schedulable>
+{
+    amethyst_assets::build_asset_processor_system::<FontAsset>(world, resources)
 }

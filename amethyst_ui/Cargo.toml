@@ -25,10 +25,11 @@ clipboard = "0.5"
 derivative = "2.1.1"
 derive-new = "0.5.6"
 fnv = "1"
+hibitset = "0.6"
 glsl-layout = "0.3"
+legion_transform = { git = "https://github.com/jojolepro/legion_transform" }
 ron = "0.5"
 serde = { version = "1.0", features = ["derive"] }
-specs = "0.16"
 smallvec = "1.2"
 unicode-normalization = "0.1"
 unicode-segmentation = "1.6"

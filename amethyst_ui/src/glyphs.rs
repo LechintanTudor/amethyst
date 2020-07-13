@@ -164,9 +164,9 @@ where B: Backend
                     let section = VariedSection {
                         screen_position: (
                             transform.pixel_x + transform.pixel_width
-                                * ui_text.align.norm_offset().0,
+                                * ui_text.align.normalized_offset().0,
                             -(transform.pixel_y + transform.pixel_height
-                                * ui_text.align.norm_offset().1),
+                                * ui_text.align.normalized_offset().1),
                         ),
                         bounds: (transform.pixel_width, transform.pixel_height),
                         z: f32::from_bits(entity.index()),

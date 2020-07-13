@@ -38,12 +38,13 @@ where T: BindingTypes
         resources.insert(UiGlyphsResource::default());
         resources.insert(EventChannel::<UiEvent>::new());
 
-        // TODO: Remove, should be handled by `amethyst_input`
+        // TODO: Remove; should be handled by `amethyst_input`
         resources.insert(InputHandler::<T>::new());
         resources.insert(EventChannel::<InputEvent<T>>::new());
 
         builder.add_system(Stage::Logic, systems::build_ui_mouse_system::<T>);
         builder.add_system(Stage::Logic, systems::build_font_asset_processor_system);
+        builder.add_system(Stage::Logic, systems::build_ui_transform_system);
 
         /*
         todo!("loader");

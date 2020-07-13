@@ -1,6 +1,6 @@
 use crate::Selected;
 use amethyst_core::ecs::prelude::*;
-use specs::hibitset::BitSet;
+use hibitset::BitSet;
 
 #[cfg(feature = "profiler")]
 use thread_profiler::profile_scope;

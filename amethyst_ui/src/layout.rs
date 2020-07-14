@@ -1,8 +1,7 @@
-use crate::UiTransform;
+use crate::{Parent, UiTransform};
 use amethyst_core::ecs::prelude::*;
 use amethyst_window::ScreenDimensions;
 use glyph_brush::{HorizontalAlign, VerticalAlign};
-use legion_transform::components::Parent;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "profiler")]
@@ -131,20 +130,20 @@ where E: EntityStore
     let (
         parent_pixel_x,
         parent_pixel_y,
+        parent_global_z,
         parent_pixel_width,
         parent_pixel_height,
-        parent_global_z
     ) = match world.get_component::<Parent>(entity).map(|p| *p) {
         Some(Parent(parent)) => {
             solve_transform(parent, screen_width, screen_height, world, solved_transforms);
 
-            match world.get_component::<UiTransform>(entity) {
+            match world.get_component::<UiTransform>(parent) {
                 Some(transform) => (
                     transform.pixel_x,
                     transform.pixel_y,
+                    transform.global_z,
                     transform.pixel_width,
                     transform.pixel_height,
-                    transform.global_z,
                 ),
                 None => return,
             }
@@ -152,9 +151,9 @@ where E: EntityStore
         None => (
             0.0,
             0.0,
+            0.0,
             screen_width,
             screen_height,
-            0.0,
         )
     };
 
@@ -163,9 +162,9 @@ where E: EntityStore
             &mut transform,
             parent_pixel_x,
             parent_pixel_y,
+            parent_global_z,
             parent_pixel_width,
             parent_pixel_height,
-            parent_global_z,
         );
     }
 }
@@ -174,9 +173,9 @@ fn modify_transform_bounds(
     transform: &mut UiTransform,
     parent_pixel_x: f32,
     parent_pixel_y: f32,
+    parent_global_z: f32,
     parent_pixel_width: f32,
     parent_pixel_height: f32,
-    parent_global_z: f32,
 )
 {
     let (offset_x, offset_y) = transform.anchor.normalized_offset();

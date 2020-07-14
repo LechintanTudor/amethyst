@@ -3,4 +3,5 @@ pub use crate::{
     format::build_font_asset_processor_system,
     glyphs::build_ui_glyphs_system,
     layout::build_ui_transform_system,
+    sorted::build_ui_sorting_system,
 };

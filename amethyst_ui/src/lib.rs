@@ -5,7 +5,7 @@
 
 pub use self::{
     bundle::UiBundle,
-    event::UiEvent,
+    event::{UiEvent, UiEventType},
     format::{FontAsset, TtfFormat},
     image::UiImage,
     layout::{Anchor, ScaleMode, Stretch},
@@ -14,9 +14,11 @@ pub use self::{
     text::{LineMode, UiText, TextEditing},
     transform::UiTransform,
 };
+pub use legion_transform::components::Parent;
 
 mod button;
 mod bundle;
+mod drag;
 mod event;
 mod format;
 mod glyphs;
@@ -25,6 +27,7 @@ mod layout;
 mod pass;
 mod selection;
 mod selection_order_cache;
+mod sorted;
 mod systems;
 mod text;
 mod transform;

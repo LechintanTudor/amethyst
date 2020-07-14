@@ -1,4 +1,6 @@
-use crate::{Anchor, ScaleMode, Stretch};
+use crate::{Anchor, Parent, ScaleMode, Stretch};
+use amethyst_core::ecs::prelude::*;
+use amethyst_window::ScreenDimensions;
 use serde::{Deserialize, Serialize};
 
 #[non_exhaustive]
@@ -24,9 +26,11 @@ pub struct UiTransform {
 }
 
 impl UiTransform {
-    pub fn new(id: String, anchor: Anchor, pivot: Anchor, x: f32, y: f32, z: f32, width: f32, height: f32) -> Self {
+    pub fn new<S>(id: S, anchor: Anchor, pivot: Anchor, x: f32, y: f32, z: f32, width: f32, height: f32) -> Self
+    where S: Into<String>
+    {
         Self {
-            id,
+            id: id.into(),
             anchor,
             pivot,
             stretch: Stretch::NoStretch,
@@ -75,6 +79,11 @@ impl UiTransform {
         self
     }
 
+    pub fn with_scale_mode(mut self, scale_mode: ScaleMode) -> Self {
+        self.scale_mode = scale_mode;
+        self
+    }
+
     pub fn pixel_x(&self) -> f32 {
         self.pixel_x
     }
@@ -96,6 +105,25 @@ impl UiTransform {
     }
 }
 
+pub fn get_parent_pixel_size<E>(
+    entity: Entity,
+    world: &E,
+    screen_dimensions: &ScreenDimensions,
+) -> (f32, f32)
+where E: EntityStore
+{
+    if let Some(Parent(parent)) = world.get_component::<Parent>(entity).map(|p| *p) {
+        if let Some(transform) = world.get_component::<UiTransform>(entity) {
+            return (
+                transform.pixel_width,
+                transform.pixel_height,
+            );
+        }
+    }
+
+    (screen_dimensions.width(), screen_dimensions.height())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,11 +134,8 @@ mod tests {
             "".to_string(),
             Anchor::TopLeft,
             Anchor::Middle,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            1.0,
+            0.0, 0.0, 0.0,
+            1.0, 1.0,
         );
 
         assert!(transform.position_inside_local(-0.49, 0.20));
@@ -123,11 +148,8 @@ mod tests {
             "".to_string(),
             Anchor::TopLeft,
             Anchor::Middle,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            1.0,
+            0.0, 0.0, 0.0,
+            1.0, 1.0,
         );
 
         assert!(transform.position_inside(-0.49, 0.20));

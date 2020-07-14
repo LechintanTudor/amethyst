@@ -1,6 +1,7 @@
 use crate::{
     FontAsset, UiEvent,
     glyphs::UiGlyphsResource,
+    sorted::SortedWidgets,
     systems,
 };
 use amethyst_assets::AssetStorage;
@@ -41,10 +42,12 @@ where T: BindingTypes
         // TODO: Remove; should be handled by `amethyst_input`
         resources.insert(InputHandler::<T>::new());
         resources.insert(EventChannel::<InputEvent<T>>::new());
+        resources.insert(SortedWidgets::new());
 
-        builder.add_system(Stage::Logic, systems::build_ui_mouse_system::<T>);
         builder.add_system(Stage::Logic, systems::build_font_asset_processor_system);
         builder.add_system(Stage::Logic, systems::build_ui_transform_system);
+        builder.add_system(Stage::Logic, systems::build_ui_sorting_system);
+        builder.add_system(Stage::Logic, systems::build_ui_mouse_system::<T>);
 
         /*
         todo!("loader");

@@ -1,6 +1,7 @@
 use crate::{
     UiImage, UiTransform,
     glyphs::{UiGlyphs, UiGlyphsResource},
+    sorted::SortedWidgets,
     systems,
     utils,
 };
@@ -157,7 +158,6 @@ where B: Backend
             textures,
             vertex,
             change: ChangeDetection::default(),
-            cached_draw_order: CachedDrawOrder::default(),
             batches: OrderedOneLevelBatch::default(),
             white_texture,
         }))
@@ -186,7 +186,7 @@ impl AsVertex for UiArgs {
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, AsStd140)]
 struct UiViewArgs {
-    inverse_window_size: vec2,
+    inverse_window_half_size: vec2,
 }
 
 #[derive(Debug)]
@@ -200,7 +200,6 @@ where B: Backend
     vertex: DynamicVertexBuffer<B, UiArgs>,
     batches: OrderedOneLevelBatch<TextureId, UiArgs>,
     change: ChangeDetection,
-    cached_draw_order: CachedDrawOrder,
     white_texture: Handle<Texture>,
 }
 
@@ -251,13 +250,11 @@ where B: Backend
         // Batches
         self.batches.swap_clear();
 
-        let widget_query = <(Read<UiTransform>, TryRead<UiImage>, TryRead<Tint>, TryRead<UiGlyphs>)>::query()
-            .filter(!component::<Hidden>() & !component::<HiddenPropagate>());
+        for &(entity, _) in aux.resources.get::<SortedWidgets>().unwrap().entities() {
+            let transform = aux.world.get_component::<UiTransform>(entity).unwrap();
+            let tint = aux.world.get_component::<Tint>(entity).map(|t| t.as_ref().clone());
 
-        for (entity, (transform, image, tint, glyphs)) in widget_query.iter_entities(aux.world) {
-            let tint = tint.map(|t| t.as_ref().clone());
-
-            if let Some(image) = image {
+            if let Some(image) = aux.world.get_component::<UiImage>(entity) {
                 let image_changed = render_image(
                     factory,
                     &transform,
@@ -268,11 +265,9 @@ where B: Backend
                     &mut self.batches,
                     aux.resources,
                 );
-
-                changed = changed || image_changed;
             }
 
-            if let Some(glyph_data) = glyphs {
+            if let Some(glyph_data) = aux.world.get_component::<UiGlyphs>(entity) {
                 if !glyph_data.vertices.is_empty() {
                     self.batches.insert(glyph_texture_id, glyph_data.vertices.iter().cloned());
                 }
@@ -292,9 +287,9 @@ where B: Backend
         let screen_dimensions = aux.resources.get::<ScreenDimensions>().unwrap();
 
         let view_args = UiViewArgs {
-            inverse_window_size: [
-                1.0 / screen_dimensions.width() as f32,
-                1.0 / screen_dimensions.height() as f32,
+            inverse_window_half_size: [
+                1.0 / (screen_dimensions.width() as f32 / 2.0),
+                1.0 / (screen_dimensions.height() as f32 / 2.0),
             ].into(),
         };
 
@@ -506,10 +501,4 @@ fn tint_color(tint: Option<Tint>) -> [f32; 4] {
         }
         None => [1.0, 1.0, 1.0, 1.0]
     }
-}
-
-#[derive(Clone, Default, Debug)]
-struct CachedDrawOrder {
-    cached: BitSet,
-    cache: Vec<(f32, Entity)>,
 }

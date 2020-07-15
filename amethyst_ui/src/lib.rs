@@ -5,6 +5,7 @@
 
 pub use self::{
     bundle::UiBundle,
+    drag::Draggable,
     event::{UiEvent, UiEventType},
     format::{FontAsset, TtfFormat},
     image::UiImage,

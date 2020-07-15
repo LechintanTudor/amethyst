@@ -79,11 +79,6 @@ impl UiTransform {
         self
     }
 
-    pub fn with_scale_mode(mut self, scale_mode: ScaleMode) -> Self {
-        self.scale_mode = scale_mode;
-        self
-    }
-
     pub fn pixel_x(&self) -> f32 {
         self.pixel_x
     }

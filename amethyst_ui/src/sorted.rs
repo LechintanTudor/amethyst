@@ -7,18 +7,18 @@ use amethyst_core::{
 // Sorts visible widgets from farthest to closest
 #[derive(Clone, Debug)]
 pub struct SortedWidgets {
-    entities: Vec<(Entity, f32)>,
+    widgets: Vec<(Entity, f32)>,
 }
 
 impl SortedWidgets {
     pub fn new() -> Self {
         Self {
-            entities: Vec::new(),
+            widgets: Vec::new(),
         }
     }
 
-    pub fn entities(&self) -> &[(Entity, f32)] {
-        &self.entities
+    pub fn widgets(&self) -> &[(Entity, f32)] {
+        &self.widgets
     }
 }
 
@@ -29,15 +29,15 @@ pub fn build_ui_sorting_system(_: &mut World, _: &mut Resources) -> Box<dyn Sche
             Read::<UiTransform>::query()
                 .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
         )
-        .build(|_, world, sorted_widgets, query| {
-            sorted_widgets.entities.clear();
-            sorted_widgets.entities.extend(
+        .build(|_, world, sorted, query| {
+            sorted.widgets.clear();
+            sorted.widgets.extend(
                 query
                     .iter_entities(world)
                     .map(|(e, t)| (e, t.global_z))
             );
-            sorted_widgets
-                .entities
+            sorted
+                .widgets
                 .sort_by(|(_, z1), (_, z2)| f32::partial_cmp(z1, z2).expect("Unexpected NaN"));
         })
 }

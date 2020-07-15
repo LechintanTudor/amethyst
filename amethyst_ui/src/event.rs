@@ -1,4 +1,8 @@
-use crate::UiTransform;
+use crate::{
+    UiTransform,
+    sorted::SortedWidgets,
+    utils,
+};
 use amethyst_core::{
     Hidden, HiddenPropagate,
     ecs::prelude::*,
@@ -56,6 +60,19 @@ impl UiEvent {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Interactable;
 
+pub fn build_ui_mouse_system2<T>(_: &mut World, _: &mut Resources) -> Box<dyn Schedulable>
+where T: BindingTypes
+{
+    SystemBuilder::<()>::new("UiMouseSystem")
+        .read_resource::<InputHandler<T>>()
+        .read_resource::<ScreenDimensions>()
+        .read_resource::<SortedWidgets>()
+        .write_resource::<EventChannel<UiEvent>>()
+        .build(move |_, world, resources, queries| {
+
+        })
+}
+
 pub fn build_ui_mouse_system<T>(_world: &mut World, _resources: &mut Resources) -> Box<dyn Schedulable>
 where T: BindingTypes
 {
@@ -66,23 +83,20 @@ where T: BindingTypes
     SystemBuilder::<()>::new("UiMouseSystem")
         .read_resource::<InputHandler<T>>()
         .read_resource::<ScreenDimensions>()
+        .read_resource::<SortedWidgets>()
         .write_resource::<EventChannel<UiEvent>>()
-        .with_query(Read::<UiTransform>::query()
-            .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
-        )
-        .build(move |_, world, resources, query| {
-            let (input, screen_dimensions, events) = resources;
+        .read_component::<UiTransform>()
+        .build(move |_, world, resources, _| {
+            let (input, screen_dimensions, sorted_widgets, events) = resources;
 
             let mouse_down = input.mouse_button_is_down(MouseButton::Left);
             let click_started = mouse_down && !mouse_was_down;
             let click_stopped = !mouse_down && mouse_was_down;
 
-            if let Some((mouse_x, mouse_y)) = input.mouse_position() {
-                let x = mouse_x as f32;
-                // Invert Y to match Amethyst's coord system
-                let y = screen_dimensions.height() - mouse_y as f32;
+            if let Some(mouse_position) = input.mouse_position() {
+                let mouse_position = utils::world_position(mouse_position, &screen_dimensions);
 
-                let targets = get_targeted_entities((x, y), query.iter_entities(world));
+                let targets = get_targeted_entities(mouse_position, &sorted_widgets, world);
 
                 for target in targets.difference(&last_targets) {
                     events.single_write(UiEvent::new(UiEventType::HoverStart, *target));
@@ -117,30 +131,27 @@ where T: BindingTypes
         })
 }
 
-pub fn get_targeted_entities<I, T>((mouse_x, mouse_y): (f32, f32), transform_iter: I) -> HashSet<Entity>
-where
-    I: Iterator<Item = (Entity, T)>,
-    T: AsRef<UiTransform>,
+pub fn get_targeted_entities<E>(
+    (mouse_x, mouse_y): (f32, f32),
+    sorted_widgets: &SortedWidgets,
+    world: &E
+) -> HashSet<Entity>
+where E: EntityStore
 {
-    // Get hovered transforms
-    let mut transforms = transform_iter
-        .filter(|(_, t)| {
-            let t = t.as_ref();
+    let mut entities = HashSet::<Entity>::new();
 
-            (t.opaque || t.transparent_target) && t.position_inside(mouse_x, mouse_y)
-        })
-        .collect::<Vec<_>>();
-
-    // Sort transforms from closest to farthest
-    transforms.sort_by(|(_, t1), (_, t2)| {
-        (t2.as_ref().global_z).partial_cmp(&t1.as_ref().global_z).expect("Unexpected NaN")
-    });
-
-    // Discard transforms after first opaque
-    let first_opaque = transforms.iter().position(|(_, t)| t.as_ref().opaque);
-    if let Some(i) = first_opaque {
-        transforms.truncate(i + 1);
+    for &(entity, _) in sorted_widgets.widgets().iter().rev() {
+        if let Some(transform) = world.get_component::<UiTransform>(entity) {
+            if transform.position_inside(mouse_x, mouse_y) {
+                if transform.opaque {
+                    entities.insert(entity);
+                    break;
+                } else if transform.transparent_target {
+                    entities.insert(entity);
+                }
+            }
+        }
     }
 
-    transforms.into_iter().map(|(e, _)| e).collect()
+    entities
 }

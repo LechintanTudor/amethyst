@@ -250,7 +250,7 @@ where B: Backend
         // Batches
         self.batches.swap_clear();
 
-        for &(entity, _) in aux.resources.get::<SortedWidgets>().unwrap().entities() {
+        for &(entity, _) in aux.resources.get::<SortedWidgets>().unwrap().widgets() {
             let transform = aux.world.get_component::<UiTransform>(entity).unwrap();
             let tint = aux.world.get_component::<Tint>(entity).map(|t| t.as_ref().clone());
 

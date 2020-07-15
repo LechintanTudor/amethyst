@@ -48,6 +48,7 @@ where T: BindingTypes
         builder.add_system(Stage::Logic, systems::build_ui_transform_system);
         builder.add_system(Stage::Logic, systems::build_ui_sorting_system);
         builder.add_system(Stage::Logic, systems::build_ui_mouse_system::<T>);
+        builder.add_system(Stage::Logic, systems::build_drag_widget_system::<T>);
 
         /*
         todo!("loader");

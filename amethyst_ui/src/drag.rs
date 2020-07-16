@@ -1,5 +1,7 @@
 use crate::{
     Parent, ScaleMode, UiEvent, UiEventType, UiTransform,
+    event,
+    sorted::SortedWidgets,
     transform,
     utils,
 };
@@ -35,15 +37,16 @@ where T: BindingTypes
 
     SystemBuilder::<()>::new("DragWidgetSystem")
         .read_resource::<InputHandler<T>>()
-        .write_resource::<EventChannel<UiEvent>>()
         .read_resource::<ScreenDimensions>()
+        .read_resource::<SortedWidgets>()
+        .write_resource::<EventChannel<UiEvent>>()
         .read_component::<Draggable>()
         .read_component::<Hidden>()
         .read_component::<HiddenPropagate>()
         .read_component::<Parent>()
         .write_component::<UiTransform>()
         .build(move |_, world, resources, _| {
-            let (input, ui_events, screen_dimensions) = resources;
+            let (input, screen_dimensions, sorted_widgets, ui_events) = resources;
             let mouse_position = input.mouse_position().unwrap_or((0.0, 0.0));
             let mouse_position = utils::world_position(mouse_position, &screen_dimensions);
             let mouse_position = Vector2::new(mouse_position.0, mouse_position.1);
@@ -100,8 +103,22 @@ where T: BindingTypes
 
             last_mouse_position = mouse_position;
 
-            for entity in drag_stop_targets.iter() {
-                dragged_targets.remove(entity);
+            for &entity in drag_stop_targets.iter() {
+                if let Some(transform) = world.get_component::<UiTransform>(entity) {
+                    ui_events.single_write(UiEvent::new(
+                        UiEventType::Dropped {
+                            dropped_on: event::get_targeted_below(
+                                (mouse_position.x, mouse_position.y),
+                                transform.global_z,
+                                &sorted_widgets,
+                                world,
+                            )
+                        },
+                        entity,
+                    ));
+                }
+
+                dragged_targets.remove(&entity);
             }
         })
 }

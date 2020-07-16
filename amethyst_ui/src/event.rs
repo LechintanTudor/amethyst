@@ -96,7 +96,7 @@ where T: BindingTypes
             if let Some(mouse_position) = input.mouse_position() {
                 let mouse_position = utils::world_position(mouse_position, &screen_dimensions);
 
-                let targets = get_targeted_entities(mouse_position, &sorted_widgets, world);
+                let targets = get_targeted(mouse_position, &sorted_widgets, world);
 
                 for target in targets.difference(&last_targets) {
                     events.single_write(UiEvent::new(UiEventType::HoverStart, *target));
@@ -131,7 +131,7 @@ where T: BindingTypes
         })
 }
 
-pub fn get_targeted_entities<E>(
+pub fn get_targeted<E>(
     (mouse_x, mouse_y): (f32, f32),
     sorted_widgets: &SortedWidgets,
     world: &E
@@ -154,4 +154,30 @@ where E: EntityStore
     }
 
     entities
+}
+
+pub fn get_targeted_below<E>(
+    (mouse_x, mouse_y): (f32, f32),
+    below_global_z: f32,
+    sorted_widgets: &SortedWidgets,
+    world: &E,
+) -> Option<Entity>
+where E: EntityStore
+{
+    let entities_below_z = sorted_widgets
+        .widgets()
+        .iter()
+        .rev()
+        .skip_while(|(_, z)| *z >= below_global_z)
+        .map(|(e, _)| e);
+
+    for &entity in entities_below_z {
+        if let Some(transform) = world.get_component::<UiTransform>(entity) {
+            if transform.opaque && transform.position_inside(mouse_x, mouse_y) {
+                return Some(entity);
+            }
+        }
+    }
+
+    None
 }

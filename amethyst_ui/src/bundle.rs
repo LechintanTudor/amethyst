@@ -1,6 +1,7 @@
 use crate::{
     FontAsset, UiEvent,
     glyphs::UiGlyphsResource,
+    selection::Selected,
     sorted::SortedWidgets,
     systems,
 };
@@ -38,37 +39,19 @@ where T: BindingTypes
         resources.insert(AssetStorage::<FontAsset>::new());
         resources.insert(UiGlyphsResource::default());
         resources.insert(EventChannel::<UiEvent>::new());
+        resources.insert(SortedWidgets::new());
+        resources.insert(Selected::default());
 
         // TODO: Remove; should be handled by `amethyst_input`
         resources.insert(InputHandler::<T>::new());
         resources.insert(EventChannel::<InputEvent<T>>::new());
-        resources.insert(SortedWidgets::new());
 
         builder.add_system(Stage::Logic, systems::build_font_asset_processor_system);
         builder.add_system(Stage::Logic, systems::build_ui_transform_system);
         builder.add_system(Stage::Logic, systems::build_ui_sorting_system);
         builder.add_system(Stage::Logic, systems::build_ui_mouse_system::<T>);
         builder.add_system(Stage::Logic, systems::build_drag_widget_system::<T>);
-
-        /*
-        todo!("loader");
-        // todo!("transform");
-        // todo!("mouse");
-        // todo!("processor -> font asset");
-        todo!("cache selection order");
-        todo!("selection mouse");
-        todo!("selection keyboard");
-        todo!("text editing mouse");
-        todo!("text editing input");
-        todo!("resize");
-        todo!("button");
-        todo!("drag widget");
-        todo!("action retrigger");
-        todo!("sound");
-        todo!("sound retrigger");
-        todo!("blink");
-        todo!()
-        */
+        builder.add_system(Stage::Logic, systems::build_text_editing_input_system);
 
         Ok(())
     }

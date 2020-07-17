@@ -11,7 +11,7 @@ pub use self::{
     image::UiImage,
     layout::{Anchor, ScaleMode, Stretch},
     pass::RenderUi,
-    selection::{Selectable, Selected},
+    selection::{Selected},
     text::{LineMode, UiText, TextEditing},
     transform::UiTransform,
 };
@@ -31,5 +31,6 @@ mod selection_order_cache;
 mod sorted;
 mod systems;
 mod text;
+mod text_editing;
 mod transform;
 mod utils;

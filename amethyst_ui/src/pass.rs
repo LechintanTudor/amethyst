@@ -1,5 +1,5 @@
 use crate::{
-    UiImage, UiTransform,
+    Selected, TextEditing, UiImage, UiTransform,
     glyphs::{UiGlyphs, UiGlyphsResource},
     sorted::SortedWidgets,
     systems,
@@ -249,6 +249,7 @@ where B: Backend
 
         // Batches
         self.batches.swap_clear();
+        let selected = aux.resources.get::<Selected>().map(|s| s.entity).flatten();
 
         for &(entity, _) in aux.resources.get::<SortedWidgets>().unwrap().widgets() {
             let transform = aux.world.get_component::<UiTransform>(entity).unwrap();
@@ -268,6 +269,54 @@ where B: Backend
             }
 
             if let Some(glyph_data) = aux.world.get_component::<UiGlyphs>(entity) {
+                if !glyph_data.selection_vertices.is_empty() {
+                    self.batches.insert(glyph_texture_id, glyph_data.selection_vertices.iter().cloned());
+                }
+
+                if selected == Some(entity) {
+                    if let Some(text_editing) = aux.world.get_component::<TextEditing>(entity) {
+                        let blink = text_editing.cursor_blink_timer < 0.25;
+
+                        let (w, h) = match (blink, text_editing.use_block_cursor) {
+                            (false, false) => (0.0, 0.0),
+                            (true, false) => (2.0, glyph_data.height),
+                            (false, true) => (
+                                glyph_data.space_width,
+                                f32::max(1.0, glyph_data.height * 1.0),
+                            ),
+                            (true, true) => (glyph_data.space_width, glyph_data.height),
+                        };
+
+                        let base_x = glyph_data.cursor_position.0 + w * 0.5;
+                        let base_y = glyph_data.cursor_position.1 - (glyph_data.height - h) * 0.5;
+
+                        let min_x = transform.pixel_x + transform.pixel_width * -0.5;
+                        let max_x = transform.pixel_x + transform.pixel_width * 0.5;
+                        let min_y = transform.pixel_y + transform.pixel_height * -0.5;
+                        let max_y = transform.pixel_y + transform.pixel_height * 0.5;
+
+                        let left = (base_x - w * 0.5).max(min_x).min(max_x);
+                        let right = (base_x + w * 0.5).max(min_x).min(max_x);
+                        let top = (base_y - h * 0.5).max(min_y).min(max_y);
+                        let bottom = (base_y + h * 0.5).max(min_y).min(max_y);
+
+                        let x = (left + right) * 0.5;
+                        let y = (top + bottom) * 0.5;
+                        let w = right - left;
+                        let h = bottom - top;
+
+                        self.batches.insert(
+                            white_texture_id,
+                            Some(UiArgs {
+                                position: [x, y].into(),
+                                dimensions: [w, h].into(),
+                                tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
+                                color: [1.0, 1.0, 1.0, 1.0].into(),
+                            }),
+                        );
+                    }
+                }
+
                 if !glyph_data.vertices.is_empty() {
                     self.batches.insert(glyph_texture_id, glyph_data.vertices.iter().cloned());
                 }

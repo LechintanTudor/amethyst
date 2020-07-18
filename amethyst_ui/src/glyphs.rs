@@ -30,6 +30,7 @@ use glyph_brush::{
 };
 use std::{
     collections::HashMap,
+    cmp,
     mem,
 };
 
@@ -46,10 +47,13 @@ impl UiGlyphsResource {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct UiGlyphs {
     pub(crate) vertices: Vec<UiArgs>,
-    pub(crate) selected_vertices: Vec<UiArgs>,
+    pub(crate) selection_vertices: Vec<UiArgs>,
+    pub(crate) cursor_position: (f32, f32),
+    pub(crate) height: f32,
+    pub(crate) space_width: f32,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -102,7 +106,10 @@ where B: Backend
                 .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
         )
         .with_query(<(Write<UiGlyphs>,)>::query())
-        .with_query(<(Read<UiTransform>, Write<UiText>, TryWrite<UiGlyphs>)>::query())
+        .with_query(
+            <(Read<UiTransform>, Write<UiText>, TryWrite<TextEditing>, TryWrite<UiGlyphs>)>::query()
+                .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
+        )
         .write_component::<UiGlyphs>()
         .build(move |commands, world, resources, queries| {
             let (factory, queue, texture_storage, font_storage, glyphs_res) = resources;
@@ -316,11 +323,11 @@ where B: Backend
                         let mut glyph_ctr = 0;
 
                         for (mut glyph_data,) in glyph_query.iter_mut(world) {
-                            glyph_data.selected_vertices.clear();
+                            glyph_data.selection_vertices.clear();
                             glyph_data.vertices.clear();
                         }
 
-                        for (entity, (transform, ui_text, glyphs)) in glyph_query2.iter_entities_mut(world) {
+                        for (entity, (transform, ui_text, text_editing, mut glyphs)) in glyph_query2.iter_entities_mut(world) {
                             let entity_id = entity.index();
 
                             let len = vertices[glyph_ctr..]
@@ -333,13 +340,51 @@ where B: Backend
                                 .map(|v| v.1);
                             glyph_ctr += len;
 
-                            if let Some(mut glyph_data) = glyphs {
+                            if let Some(mut glyph_data) = glyphs.as_mut() {
                                 glyph_data.vertices.extend(entity_vertices);
                             } else {
                                 commands.add_component(entity, UiGlyphs {
                                     vertices: entity_vertices.collect(),
-                                    selected_vertices: Vec::new(),
+                                    ..UiGlyphs::default()
                                 });
+                            }
+
+                            if let Some(text_editing) = text_editing {
+                                let font = font_storage
+                                    .get(&ui_text.font)
+                                    .expect("Font with rendered glyphs must be loaded");
+                                let scale = Scale::uniform(ui_text.font_size);
+                                let v_metrics = font.0.v_metrics(scale);
+                                let height = v_metrics.ascent - v_metrics.descent;
+                                let offset = (v_metrics.ascent + v_metrics.descent) / 2.0;
+                                let highlight = text_editing.cursor_position + text_editing.highlight_vector;
+                                let glyph_count = ui_text.cached_glyphs.len();
+                                let start = cmp::min(highlight as usize, glyph_count);
+                                let end = cmp::max(highlight as usize, glyph_count);
+
+                                let selection_ui_args_iter = ui_text.cached_glyphs[start..end]
+                                    .iter()
+                                    .map(|g| UiArgs {
+                                        position: [g.x + g.advance_width / 2.0, g.y + offset].into(),
+                                        dimensions: [g.advance_width, height].into(),
+                                        tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
+                                        color: [1.0, 1.0, 1.0, 1.0].into(), // TODO: Tint
+                                    });
+
+                                if let Some(mut glyph_data) = glyphs {
+                                    glyph_data.selection_vertices.extend(selection_ui_args_iter);
+                                    glyph_data.height = height;
+                                    glyph_data.space_width =
+                                        font.0.glyph(' ').scaled(scale).h_metrics().advance_width;
+
+                                    update_cursor_position(
+                                        &mut glyph_data,
+                                        &ui_text,
+                                        &transform,
+                                        text_editing.cursor_position as usize,
+                                        offset,
+                                    );
+                                }
                             }
                         }
 
@@ -400,4 +445,25 @@ where B: Backend
         )
         .map(B::wrap_texture)
         .expect("Failed to create glyph texture")
+}
+
+fn update_cursor_position(
+    glyph_data: &mut UiGlyphs,
+    ui_text: &UiText,
+    transform: &UiTransform,
+    cursor_position: usize,
+    offset: f32,
+)
+{
+    glyph_data.cursor_position =
+        if let Some(glyph) = ui_text.cached_glyphs.get(cursor_position) {
+            (glyph.x, glyph.y + offset)
+        } else if let Some(glyph) = ui_text.cached_glyphs.last() {
+            (glyph.x, glyph.y + offset)
+        } else {
+            (
+                transform.pixel_x + transform.pixel_width * ui_text.align.normalized_offset().0,
+                transform.pixel_y,
+            )
+        }
 }

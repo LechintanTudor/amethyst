@@ -391,7 +391,24 @@ where B: Backend
                         break;
                     },
                     Ok(BrushAction::ReDraw) => {
-                        // TODO: Update cursor position
+                        for (entity, (transform, ui_text, text_editing, glyphs)) in glyph_query2.iter_entities_mut(world) {
+                            let font = font_storage
+                                .get(&ui_text.font)
+                                .expect("Font with rendered glyphs must be loaded");
+                            let scale = Scale::uniform(ui_text.font_size);
+                            let v_metrics = font.0.v_metrics(scale);
+                            let offset = (v_metrics.ascent + v_metrics.descent) / 2.0;
+
+                            if let (Some(text_editing), Some(mut glyph_data)) = (text_editing, glyphs) {
+                                update_cursor_position(
+                                    &mut glyph_data,
+                                    &ui_text,
+                                    &transform,
+                                    text_editing.cursor_position as usize,
+                                    offset,
+                                );
+                            }
+                        }
                         break;
                     }
                     Err(BrushError::TextureTooSmall { suggested: (width, height) }) => {
@@ -459,11 +476,11 @@ fn update_cursor_position(
         if let Some(glyph) = ui_text.cached_glyphs.get(cursor_position) {
             (glyph.x, glyph.y + offset)
         } else if let Some(glyph) = ui_text.cached_glyphs.last() {
-            (glyph.x, glyph.y + offset)
+            (glyph.x + glyph.advance_width, glyph.y + offset)
         } else {
             (
                 transform.pixel_x + transform.pixel_width * ui_text.align.normalized_offset().0,
-                transform.pixel_y,
+                transform.pixel_y + transform.pixel_height * ui_text.align.normalized_offset().1,
             )
         }
 }

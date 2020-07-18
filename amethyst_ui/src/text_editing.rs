@@ -14,7 +14,7 @@ use unicode_normalization::{
     char::is_combining_mark,
 };
 use unicode_segmentation::UnicodeSegmentation;
-use winit::{Event, WindowEvent};
+use winit::{ElementState, Event, KeyboardInput, ModifiersState, VirtualKeyCode, WindowEvent};
 
 pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources) -> Box<dyn Schedulable> {
     let mut winit_reader_id = resources
@@ -71,6 +71,69 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                                 ui_events.single_write(UiEvent::new(UiEventType::ValueChange, entity));
                             }
                         }
+                        Event::WindowEvent {
+                            event: WindowEvent::KeyboardInput {
+                                input: KeyboardInput {
+                                    state: ElementState::Pressed,
+                                    virtual_keycode: Some(keycode),
+                                    modifiers,
+                                    ..
+                                },
+                                ..
+                            },
+                            ..
+                        } => match keycode {
+                            VirtualKeyCode::Back => {
+                                if !delete_highlighted(&mut text_editing, &mut ui_text)
+                                    && text_editing.cursor_position > 0
+                                {
+                                    if let Some((byte, len)) = ui_text
+                                        .text
+                                        .grapheme_indices(true)
+                                        .nth(text_editing.cursor_position as usize - 1)
+                                        .map(|(offset, grapheme)| (offset, grapheme.len()))
+                                    {
+                                        ui_text.text.drain(byte..byte + len);
+                                        text_editing.cursor_position -= 1;
+                                    }
+                                }
+                            },
+                            VirtualKeyCode::Left => {
+                                if text_editing.highlight_vector == 0 || modifiers.shift {
+                                    if text_editing.cursor_position > 0 {
+                                        let delta = if ctrl_or_cmd(modifiers) {
+                                            let mut grapheme_count = 0;
+
+                                            for word in ui_text.text.split_word_bounds() {
+                                                let word_grapheme_count =
+                                                    word.graphemes(true).count() as isize;
+
+                                                if grapheme_count + word_grapheme_count
+                                                    >= text_editing.cursor_position
+                                                {
+                                                    break;
+                                                }
+
+                                                grapheme_count += word_grapheme_count;
+                                            }
+
+                                            text_editing.cursor_position - grapheme_count
+                                        } else {
+                                            1
+                                        };
+
+                                        text_editing.cursor_position -= delta;
+
+                                        if modifiers.shift {
+                                            text_editing.highlight_vector += delta;
+                                        }
+
+                                        text_editing.cursor_blink_timer = 0.0;
+                                    }
+                                }
+                            },
+                            _ => (),
+                        }
                         _ => (),
                     }
                 }
@@ -123,4 +186,12 @@ fn highlighted_bytes(text_editing: &TextEditing, ui_text: &UiText) -> Range<usiz
         .unwrap_or_else(|| ui_text.text.len());
 
     start_byte..end_byte
+}
+
+fn ctrl_or_cmd(modifiers: ModifiersState) -> bool {
+    if cfg!(target_os = "macos") {
+        modifiers.logo
+    } else {
+        modifiers.ctrl
+    }
 }

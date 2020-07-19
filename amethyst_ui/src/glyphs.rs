@@ -218,6 +218,8 @@ where B: Backend
                     cached_glyphs.extend(all_glyphs);
                     glyph_brush.queue_custom_layout(section, &layout);
                     mem::swap(&mut ui_text.cached_glyphs, &mut cached_glyphs);
+
+
                 }
             }
 
@@ -300,8 +302,8 @@ where B: Backend
                         }
 
                         let position = [
-                            (coords_max_x + coords_min_x) * 0.5,
-                            -(coords_max_y + coords_min_y) * 0.5,
+                            (coords_max_x + coords_min_x) / 2.0,
+                            -(coords_max_y + coords_min_y) / 2.0,
                         ];
                         let dimensions = [(coords_max_x - coords_min_x), (coords_max_y - coords_min_y)];
                         let tex_coords_bounds = [uv.min.x, uv.min.y, uv.max.x, uv.max.y];
@@ -358,9 +360,9 @@ where B: Backend
                                 let height = v_metrics.ascent - v_metrics.descent;
                                 let offset = (v_metrics.ascent + v_metrics.descent) / 2.0;
                                 let highlight = text_editing.cursor_position + text_editing.highlight_vector;
-                                let glyph_count = ui_text.cached_glyphs.len();
-                                let start = cmp::min(highlight as usize, glyph_count);
-                                let end = cmp::max(highlight as usize, glyph_count);
+                                // TODO: Clamp start/end to cached glyph count
+                                let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
+                                let end = cmp::max(highlight as usize, text_editing.cursor_position as usize);
 
                                 let selection_ui_args_iter = ui_text.cached_glyphs[start..end]
                                     .iter()
@@ -368,7 +370,7 @@ where B: Backend
                                         position: [g.x + g.advance_width / 2.0, g.y + offset].into(),
                                         dimensions: [g.advance_width, height].into(),
                                         tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
-                                        color: [1.0, 1.0, 1.0, 1.0].into(), // TODO: Tint
+                                        color: [1.0, 0.0, 0.0, 1.0].into(), // TODO: Tint
                                     });
 
                                 if let Some(mut glyph_data) = glyphs {
@@ -397,9 +399,30 @@ where B: Backend
                                 .expect("Font with rendered glyphs must be loaded");
                             let scale = Scale::uniform(ui_text.font_size);
                             let v_metrics = font.0.v_metrics(scale);
+                            let height = v_metrics.ascent - v_metrics.descent;
                             let offset = (v_metrics.ascent + v_metrics.descent) / 2.0;
 
                             if let (Some(text_editing), Some(mut glyph_data)) = (text_editing, glyphs) {
+                                let highlight = text_editing.cursor_position + text_editing.highlight_vector;
+                                // TODO: Clamp start/end to cached glyph count
+                                let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
+                                let end = cmp::max(highlight as usize, text_editing.cursor_position as usize);
+
+                                let selection_ui_args_iter = ui_text.cached_glyphs[start..end]
+                                    .iter()
+                                    .map(|g| UiArgs {
+                                        position: [g.x + g.advance_width / 2.0, g.y + offset].into(),
+                                        dimensions: [g.advance_width, height].into(),
+                                        tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
+                                        color: [1.0, 0.0, 0.0, 1.0].into(), // TODO: Tint
+                                    });
+
+                                glyph_data.selection_vertices.clear();
+                                glyph_data.selection_vertices.extend(selection_ui_args_iter);
+                                glyph_data.height = height;
+                                glyph_data.space_width =
+                                    font.0.glyph(' ').scaled(scale).h_metrics().advance_width;
+
                                 update_cursor_position(
                                     &mut glyph_data,
                                     &ui_text,

@@ -270,7 +270,7 @@ where B: Backend
 
             if let Some(glyph_data) = aux.world.get_component::<UiGlyphs>(entity) {
                 if !glyph_data.selection_vertices.is_empty() {
-                    self.batches.insert(glyph_texture_id, glyph_data.selection_vertices.iter().cloned());
+                    self.batches.insert(white_texture_id, glyph_data.selection_vertices.iter().cloned());
                 }
 
                 if selected == Some(entity) {

@@ -83,6 +83,27 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                             },
                             ..
                         } => match keycode {
+                            VirtualKeyCode::Home | VirtualKeyCode::Up => {
+                                text_editing.highlight_vector = if modifiers.shift {
+                                    text_editing.cursor_position
+                                } else {
+                                    0
+                                };
+                                text_editing.cursor_position = 0;
+                                text_editing.cursor_blink_timer = 0.0;
+                            }
+                            VirtualKeyCode::End | VirtualKeyCode::Down => {
+                                let glyph_count = ui_text.text.graphemes(true).count() as isize;
+
+                                text_editing.highlight_vector = if modifiers.shift {
+                                    text_editing.cursor_position - glyph_count
+                                } else {
+                                    0
+                                };
+
+                                text_editing.cursor_position = glyph_count;
+                                text_editing.cursor_blink_timer = 0.0;
+                            }
                             VirtualKeyCode::Back => {
                                 if !delete_highlighted(&mut text_editing, &mut ui_text)
                                     && text_editing.cursor_position > 0
@@ -91,13 +112,26 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                                         .text
                                         .grapheme_indices(true)
                                         .nth(text_editing.cursor_position as usize - 1)
-                                        .map(|(offset, grapheme)| (offset, grapheme.len()))
+                                        .map(|(byte, grapheme)| (byte, grapheme.len()))
                                     {
                                         ui_text.text.drain(byte..byte + len);
                                         text_editing.cursor_position -= 1;
                                     }
                                 }
                             },
+                            VirtualKeyCode::Delete => {
+                                if !delete_highlighted(&mut text_editing, &mut ui_text) {
+                                    if let Some((byte, len)) = ui_text
+                                        .text
+                                        .grapheme_indices(true)
+                                        .nth(text_editing.cursor_position as usize)
+                                        .map(|(byte, grapheme)| (byte, grapheme.len()))
+                                    {
+                                        ui_text.text.drain(byte..byte + len);
+                                        text_editing.cursor_blink_timer = 0.0;
+                                    }
+                                }
+                            }
                             VirtualKeyCode::Left => {
                                 if text_editing.highlight_vector == 0 || modifiers.shift {
                                     if text_editing.cursor_position > 0 {
@@ -130,8 +164,51 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
 
                                         text_editing.cursor_blink_timer = 0.0;
                                     }
+                                } else {
+                                    text_editing.cursor_position = cmp::min(
+                                        text_editing.cursor_position,
+                                        text_editing.cursor_position + text_editing.highlight_vector,
+                                    );
+                                    text_editing.highlight_vector = 0;
                                 }
                             },
+                            VirtualKeyCode::Right => {
+                                if text_editing.highlight_vector == 0 || modifiers.shift {
+                                    let glyph_count = ui_text.text.graphemes(true).count();
+
+                                    if (text_editing.cursor_position as usize) < glyph_count {
+                                        let delta = if ctrl_or_cmd(modifiers) {
+                                            let mut grapheme_count = 0_isize;
+
+                                            for word in ui_text.text.split_word_bounds() {
+                                                grapheme_count += word.graphemes(true).count() as isize;
+
+                                                if grapheme_count > text_editing.cursor_position {
+                                                    break;
+                                                }
+                                            }
+
+                                            grapheme_count - text_editing.cursor_position
+                                        } else {
+                                            1
+                                        };
+
+                                        text_editing.cursor_position += delta;
+
+                                        if modifiers.shift {
+                                            text_editing.highlight_vector -= delta;
+                                        }
+
+                                        text_editing.cursor_blink_timer = 0.0;
+                                    }
+                                } else {
+                                    text_editing.cursor_position = cmp::max(
+                                        text_editing.cursor_position,
+                                        text_editing.cursor_position + text_editing.highlight_vector,
+                                    );
+                                    text_editing.highlight_vector = 0;
+                                }
+                            }
                             _ => (),
                         }
                         _ => (),

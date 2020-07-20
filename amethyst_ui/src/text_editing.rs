@@ -1,5 +1,5 @@
 use crate::{
-    Selected, TextEditing, UiEvent, UiEventType, UiText,
+    LineMode, Selected, TextEditing, UiEvent, UiEventType, UiText,
 };
 use amethyst_core::{
     ecs::prelude::*,
@@ -209,6 +209,43 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                                     text_editing.highlight_vector = 0;
                                 }
                             }
+                            VirtualKeyCode::Return | VirtualKeyCode::NumpadEnter => {
+                                match ui_text.line_mode {
+                                    LineMode::Single => {
+                                        ui_events.single_write(UiEvent::new(
+                                            UiEventType::ValueCommit,
+                                            entity,
+                                        ));
+                                    }
+                                    LineMode::Wrap => {
+                                        if modifiers.shift {
+                                            if ui_text.text.graphemes(true).count()
+                                                < text_editing.max_length
+                                            {
+                                                let start_byte = ui_text
+                                                    .text
+                                                    .grapheme_indices(true)
+                                                    .nth(text_editing.cursor_position as usize)
+                                                    .map(|(i, _)| i)
+                                                    .unwrap_or_else(|| ui_text.text.len());
+
+                                                ui_text.text.insert_str(start_byte, "\n");
+                                                text_editing.cursor_position += 1;
+
+                                                ui_events.single_write(UiEvent::new(
+                                                    UiEventType::ValueChange,
+                                                    entity,
+                                                ));
+                                            }
+                                        } else {
+                                            ui_events.single_write(UiEvent::new(
+                                                UiEventType::ValueCommit,
+                                                entity,
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
                             _ => (),
                         }
                         _ => (),
@@ -271,4 +308,13 @@ fn ctrl_or_cmd(modifiers: ModifiersState) -> bool {
     } else {
         modifiers.ctrl
     }
+}
+
+fn cursor_byte_index(text_editing: &TextEditing, ui_text: &UiText) -> usize {
+    ui_text
+        .text
+        .grapheme_indices(true)
+        .nth(text_editing.cursor_position as usize)
+        .map(|(i, _)| i)
+        .unwrap_or_else(|| ui_text.text.len())
 }

@@ -282,7 +282,7 @@ where B: Backend
                             (true, false) => (2.0, glyph_data.height),
                             (false, true) => (
                                 glyph_data.space_width,
-                                f32::max(1.0, glyph_data.height * 1.0),
+                                f32::max(1.0, glyph_data.height * 0.1),
                             ),
                             (true, true) => (glyph_data.space_width, glyph_data.height),
                         };

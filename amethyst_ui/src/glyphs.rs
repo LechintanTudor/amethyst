@@ -107,7 +107,13 @@ where B: Backend
         )
         .with_query(<(Write<UiGlyphs>,)>::query())
         .with_query(
-            <(Read<UiTransform>, Write<UiText>, TryWrite<TextEditing>, TryWrite<UiGlyphs>)>::query()
+            <(
+                Read<UiTransform>,
+                Write<UiText>,
+                TryRead<Tint>,
+                TryWrite<TextEditing>,
+                TryWrite<UiGlyphs>,
+            )>::query()
                 .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
         )
         .write_component::<UiGlyphs>()
@@ -218,8 +224,6 @@ where B: Backend
                     cached_glyphs.extend(all_glyphs);
                     glyph_brush.queue_custom_layout(section, &layout);
                     mem::swap(&mut ui_text.cached_glyphs, &mut cached_glyphs);
-
-
                 }
             }
 
@@ -329,7 +333,7 @@ where B: Backend
                             glyph_data.vertices.clear();
                         }
 
-                        for (entity, (transform, ui_text, text_editing, mut glyphs)) in glyph_query2.iter_entities_mut(world) {
+                        for (entity, (transform, ui_text, tint, text_editing, mut glyphs)) in glyph_query2.iter_entities_mut(world) {
                             let entity_id = entity.index();
 
                             let len = vertices[glyph_ctr..]
@@ -364,13 +368,22 @@ where B: Backend
                                 let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
                                 let end = cmp::max(highlight as usize, text_editing.cursor_position as usize);
 
+                                let color = if let Some(tint) = tint {
+                                    utils::mul_blend_srgba_to_lin_rgba_array(
+                                        &text_editing.selected_background_color,
+                                        &tint.0,
+                                    )
+                                } else {
+                                    utils::srgba_to_lin_rgba_array(text_editing.selected_background_color)
+                                };
+
                                 let selection_ui_args_iter = ui_text.cached_glyphs[start..end]
                                     .iter()
                                     .map(|g| UiArgs {
                                         position: [g.x + g.advance_width / 2.0, g.y + offset].into(),
                                         dimensions: [g.advance_width, height].into(),
                                         tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
-                                        color: [1.0, 0.0, 0.0, 1.0].into(), // TODO: Tint
+                                        color: color.into(),
                                     });
 
                                 if let Some(mut glyph_data) = glyphs {
@@ -393,7 +406,7 @@ where B: Backend
                         break;
                     },
                     Ok(BrushAction::ReDraw) => {
-                        for (entity, (transform, ui_text, text_editing, glyphs)) in glyph_query2.iter_entities_mut(world) {
+                        for (entity, (transform, ui_text, tint, text_editing, glyphs)) in glyph_query2.iter_entities_mut(world) {
                             let font = font_storage
                                 .get(&ui_text.font)
                                 .expect("Font with rendered glyphs must be loaded");
@@ -408,13 +421,22 @@ where B: Backend
                                 let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
                                 let end = cmp::max(highlight as usize, text_editing.cursor_position as usize);
 
+                                let color = if let Some(tint) = tint {
+                                    utils::mul_blend_srgba_to_lin_rgba_array(
+                                        &text_editing.selected_background_color,
+                                        &tint.0,
+                                    )
+                                } else {
+                                    utils::srgba_to_lin_rgba_array(text_editing.selected_background_color)
+                                };
+
                                 let selection_ui_args_iter = ui_text.cached_glyphs[start..end]
                                     .iter()
                                     .map(|g| UiArgs {
                                         position: [g.x + g.advance_width / 2.0, g.y + offset].into(),
                                         dimensions: [g.advance_width, height].into(),
                                         tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
-                                        color: [1.0, 0.0, 0.0, 1.0].into(), // TODO: Tint
+                                        color: color.into(), // TODO: Tint
                                     });
 
                                 glyph_data.selection_vertices.clear();

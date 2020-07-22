@@ -32,7 +32,9 @@ use std::{
     collections::HashMap,
     cmp,
     mem,
+    ops::Range,
 };
+use unicode_segmentation::UnicodeSegmentation;
 
 const INITIAL_CACHE_SIZE: (u32, u32) = (512, 512);
 
@@ -102,7 +104,12 @@ where B: Backend
         .read_resource::<AssetStorage<FontAsset>>()
         .write_resource::<UiGlyphsResource>()
         .with_query(
-            <(Read<UiTransform>, Write<UiText>)>::query()
+            <(
+                Read<UiTransform>,
+                Write<UiText>,
+                TryRead<Tint>,
+                TryRead<TextEditing>,
+            )>::query()
                 .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
         )
         .with_query(<(Write<UiGlyphs>,)>::query())
@@ -131,7 +138,7 @@ where B: Backend
                 .and_then(B::unwrap_texture)
                 .expect("Glyph texture is created synchronously");
 
-            for (entity, (transform, mut ui_text)) in text_query.iter_entities_mut(world) {
+            for (entity, (transform, mut ui_text, tint, text_editing)) in text_query.iter_entities_mut(world) {
                 let mut cached_glyphs = Vec::new();
                 mem::swap(&mut ui_text.cached_glyphs, &mut cached_glyphs);
 
@@ -149,8 +156,73 @@ where B: Backend
                     }
                 }
 
+                let tint_color = if let Some(tint) = tint {
+                    utils::srgba_to_lin_rgba_array(tint.0)
+                } else {
+                    [1.0, 1.0, 1.0, 1.0]
+                };
+
+                let base_color = utils::mul_blend_lin_rgba_arrays(
+                    utils::srgba_to_lin_rgba_array(ui_text.color),
+                    tint_color,
+                );
+
                 if let (Some(font_id), Some(font_asset)) = (font_lookup.font_id(), font_asset) {
                     let scale = Scale::uniform(ui_text.font_size);
+
+                    let text = match (ui_text.password, text_editing) {
+                        (false, None) => vec![
+                            SectionText {
+                                text: &ui_text.text,
+                                scale,
+                                color: base_color,
+                                font_id,
+                            },
+                        ],
+                        (false, Some(text_editing)) => {
+                            let selected_color = utils::mul_blend_lin_rgba_arrays(
+                                utils::srgba_to_lin_rgba_array(text_editing.selected_text_color),
+                                tint_color,
+                            );
+
+                            if let Some(range) = selected_bytes(&text_editing, &ui_text.text) {
+                                let start = range.start;
+                                let end = range.end;
+
+                                vec![
+                                    SectionText {
+                                        text: &ui_text.text[..start],
+                                        scale,
+                                        color: selected_color,
+                                        font_id,
+                                    },
+                                    SectionText {
+                                        text: &ui_text.text[start..end],
+                                        scale,
+                                        color: selected_color,
+                                        font_id,
+                                    },
+                                    SectionText {
+                                        text: &ui_text.text[end..],
+                                        scale,
+                                        color: selected_color,
+                                        font_id,
+                                    },
+                                ]
+                            } else {
+                                vec![
+                                    SectionText {
+                                        text: &ui_text.text,
+                                        scale,
+                                        color: base_color,
+                                        font_id,
+                                    },
+                                ]
+                            }
+                        }
+                        _ => todo!(),
+                    };
+
                     let text = vec![
                         SectionText {
                             text: &ui_text.text,
@@ -159,6 +231,7 @@ where B: Backend
                             font_id,
                         },
                     ];
+
                     let layout = match ui_text.line_mode {
                         LineMode::Single => Layout::SingleLine {
                             line_breaker: CustomLineBreaker::None,
@@ -416,6 +489,7 @@ where B: Backend
                             let offset = (v_metrics.ascent + v_metrics.descent) / 2.0;
 
                             if let (Some(text_editing), Some(mut glyph_data)) = (text_editing, glyphs) {
+
                                 let highlight = text_editing.cursor_position + text_editing.highlight_vector;
                                 // TODO: Clamp start/end to cached glyph count
                                 let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
@@ -436,11 +510,11 @@ where B: Backend
                                         position: [g.x + g.advance_width / 2.0, g.y + offset].into(),
                                         dimensions: [g.advance_width, height].into(),
                                         tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
-                                        color: color.into(), // TODO: Tint
+                                        color: color.into(),
                                     });
 
-                                glyph_data.selection_vertices.clear();
-                                glyph_data.selection_vertices.extend(selection_ui_args_iter);
+                                //glyph_data.selection_vertices.clear();
+                                //glyph_data.selection_vertices.extend(selection_ui_args_iter);
                                 glyph_data.height = height;
                                 glyph_data.space_width =
                                     font.0.glyph(' ').scaled(scale).h_metrics().advance_width;
@@ -528,4 +602,30 @@ fn update_cursor_position(
                 transform.pixel_y + transform.pixel_height * ui_text.align.normalized_offset().1,
             )
         }
+}
+
+fn selected_bytes(text_editing: &TextEditing, text: &str) -> Option<Range<usize>> {
+    if text_editing.highlight_vector == 0 {
+        return None;
+    }
+
+    let start = cmp::min(
+        text_editing.cursor_position,
+        text_editing.cursor_position + text_editing.highlight_vector,
+    ) as usize;
+
+    let to_end = cmp::max(
+        text_editing.cursor_position,
+        text_editing.cursor_position + text_editing.highlight_vector,
+    ) as usize - start - 1;
+
+    let mut indexes = text.grapheme_indices(true).map(|(i, _)| i);
+    let start_byte = indexes.nth(start).unwrap_or(text.len());
+    let end_byte = indexes.nth(to_end).unwrap_or(text.len());
+
+    if start_byte == end_byte {
+        None
+    } else {
+        Some(start_byte..end_byte)
+    }
 }

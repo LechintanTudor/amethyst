@@ -24,23 +24,23 @@ amethyst_window = { path = "../amethyst_window", version = "0.5.0" }
 clipboard = "0.5"
 derivative = "2.1.1"
 derive-new = "0.5.6"
+failure = "0.1"
+font-kit = "0.5"
 fnv = "1"
 glsl-layout = "0.3"
+glyph_brush = "0.6.3"
+lazy_static = "1.4"
 legion_transform = { git = "https://github.com/jojolepro/legion_transform" }
+log = "0.4.6"
+paste = "0.1"
+rand = "0.7"
 ron = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 smallvec = "1.2"
+thread_profiler = { version = "0.3", optional = true }
 unicode-normalization = "0.1"
 unicode-segmentation = "1.6"
 winit = { version = "0.19", features = ["serde"] }
-log = "0.4.6"
-font-kit = "0.5"
-paste = "0.1"
-rand = "0.7"
-lazy_static = "1.4"
-failure = "0.1"
-glyph_brush = "0.6.0"
-thread_profiler = { version = "0.3", optional = true }
 
 [features]
 vulkan = ["amethyst_rendy/vulkan", "amethyst_rendy/vulkan-x11"]

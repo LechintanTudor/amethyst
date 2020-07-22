@@ -1,11 +1,11 @@
 use amethyst_assets::{Asset, Format, ProcessableAsset, ProcessingState};
 use amethyst_core::ecs::prelude::*;
 use amethyst_error::{format_err, Error, ResultExt};
-use glyph_brush::rusttype::Font;
+use glyph_brush::ab_glyph::FontArc;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
-pub struct FontAsset(pub Font<'static>);
+pub struct FontAsset(pub FontArc);
 
 impl Asset for FontAsset {
     const NAME: &'static str = "ui::Font";
@@ -19,7 +19,7 @@ impl ProcessableAsset for FontAsset {
 }
 
 #[derive(Clone)]
-pub struct FontData(Font<'static>);
+pub struct FontData(FontArc);
 
 amethyst_assets::register_format_type!(FontData);
 
@@ -34,7 +34,7 @@ impl Format<FontData> for TtfFormat {
     }
 
     fn import_simple(&self, bytes: Vec<u8>) -> Result<FontData, Error> {
-        Font::from_bytes(bytes)
+        FontArc::try_from_vec(bytes)
             .map(FontData)
             .with_context(|_| format_err!("Font parsing error"))
     }

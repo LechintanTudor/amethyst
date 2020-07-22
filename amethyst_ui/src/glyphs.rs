@@ -11,6 +11,7 @@ use amethyst_core::{
 };
 use amethyst_rendy::{
     Texture,
+    palette::Srgba,
     rendy::{
         command::QueueId,
         factory::{Factory, ImageState},
@@ -24,9 +25,8 @@ use amethyst_rendy::{
     types::Backend,
 };
 use glyph_brush::{
-    BrushAction, BrushError, BuiltInLineBreaker, FontId, GlyphBrush, GlyphBrushBuilder, GlyphCruncher,
-    Layout, LineBreak, LineBreaker, SectionText, VariedSection,
-    rusttype::Scale,
+    *,
+    ab_glyph::{Font, FontArc, PxScale, ScaleFont},
 };
 use std::{
     collections::HashMap,
@@ -46,6 +46,38 @@ pub struct UiGlyphsResource {
 impl UiGlyphsResource {
     pub fn glyph_texture(&self) -> Option<&Handle<Texture>> {
         self.glyph_texture.as_ref()
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Hash)]
+struct ExtraTextData {
+    // Entity to which the text belongs
+    entity: Entity,
+
+    // Text color stored as linear RGBA
+    color: [u32; 4],
+}
+
+impl ExtraTextData {
+    fn new(entity: Entity, color: [f32; 4]) -> Self {
+        Self {
+            entity,
+            color: [
+                color[0].to_bits(),
+                color[1].to_bits(),
+                color[2].to_bits(),
+                color[3].to_bits(),
+            ],
+        }
+    }
+
+    fn color(&self) -> [f32; 4] {
+        [
+            f32::from_bits(self.color[0]),
+            f32::from_bits(self.color[1]),
+            f32::from_bits(self.color[2]),
+            f32::from_bits(self.color[3]),
+        ]
     }
 }
 
@@ -91,9 +123,10 @@ impl LineBreaker for CustomLineBreaker {
 pub fn build_ui_glyphs_system<B>(world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
 where B: Backend
 {
-    let mut glyph_brush: GlyphBrush<'static, (u32, UiArgs)> = GlyphBrushBuilder::without_fonts()
-        .initial_cache_size(INITIAL_CACHE_SIZE)
-        .build();
+    let mut glyph_brush: GlyphBrush<(u32, UiArgs), ExtraTextData> =
+        GlyphBrushBuilder::using_fonts(Vec::<FontArc>::new())
+            .initial_cache_size(INITIAL_CACHE_SIZE)
+            .build();
 
     let mut font_map = HashMap::<u32, FontState>::new();
 
@@ -141,7 +174,6 @@ where B: Backend
             for (entity, (transform, mut ui_text, tint, text_editing)) in text_query.iter_entities_mut(world) {
                 let mut cached_glyphs = Vec::new();
                 mem::swap(&mut ui_text.cached_glyphs, &mut cached_glyphs);
-
                 cached_glyphs.clear();
 
                 let font_asset = font_storage.get(&ui_text.font);
@@ -168,16 +200,17 @@ where B: Backend
                 );
 
                 if let (Some(font_id), Some(font_asset)) = (font_lookup.font_id(), font_asset) {
-                    let scale = Scale::uniform(ui_text.font_size);
+                    let scale = PxScale::from(ui_text.font_size);
+                    let scaled_font = font_asset.0.as_scaled(scale);
 
                     let text = match (ui_text.password, text_editing) {
                         (false, None) => vec![
-                            SectionText {
+                            Text {
                                 text: &ui_text.text,
                                 scale,
-                                color: base_color,
                                 font_id,
-                            },
+                                extra: ExtraTextData::new(entity, base_color),
+                            }
                         ],
                         (false, Some(text_editing)) => {
                             let selected_color = utils::mul_blend_lin_rgba_arrays(
@@ -190,47 +223,38 @@ where B: Backend
                                 let end = range.end;
 
                                 vec![
-                                    SectionText {
+                                    Text {
                                         text: &ui_text.text[..start],
                                         scale,
-                                        color: selected_color,
                                         font_id,
+                                        extra: ExtraTextData::new(entity, base_color),
                                     },
-                                    SectionText {
+                                    Text {
                                         text: &ui_text.text[start..end],
                                         scale,
-                                        color: selected_color,
                                         font_id,
+                                        extra: ExtraTextData::new(entity, base_color),
                                     },
-                                    SectionText {
+                                    Text {
                                         text: &ui_text.text[end..],
                                         scale,
-                                        color: selected_color,
                                         font_id,
+                                        extra: ExtraTextData::new(entity, base_color),
                                     },
                                 ]
                             } else {
                                 vec![
-                                    SectionText {
+                                    Text {
                                         text: &ui_text.text,
                                         scale,
-                                        color: base_color,
                                         font_id,
+                                        extra: ExtraTextData::new(entity, base_color),
                                     },
                                 ]
                             }
                         }
-                        _ => todo!(),
+                        _ => todo!()
                     };
-
-                    let text = vec![
-                        SectionText {
-                            text: &ui_text.text,
-                            scale,
-                            color: utils::srgba_to_lin_rgba_array(ui_text.color),
-                            font_id,
-                        },
-                    ];
 
                     let layout = match ui_text.line_mode {
                         LineMode::Single => Layout::SingleLine {
@@ -247,7 +271,7 @@ where B: Backend
                         },
                     };
 
-                    let section = VariedSection {
+                    let section = Section {
                         screen_position: (
                             transform.pixel_x + transform.pixel_width
                                 * ui_text.align.normalized_offset().0,
@@ -255,18 +279,17 @@ where B: Backend
                                 * ui_text.align.normalized_offset().1),
                         ),
                         bounds: (transform.pixel_width, transform.pixel_height),
-                        z: f32::from_bits(entity.index()),
                         layout: Layout::default(),
                         text,
                     };
 
                     let mut nonempty_cached_glyphs = glyph_brush
                         .glyphs_custom_layout(&section, &layout)
-                        .map(|g| {
+                        .map(|section_glyph| {
                             CachedGlyph {
-                                x: g.position().x,
-                                y: -g.position().y,
-                                advance_width: g.unpositioned().h_metrics().advance_width,
+                                x: section_glyph.glyph.position.x,
+                                y: section_glyph.glyph.position.y,
+                                advance_width: scaled_font.h_advance(section_glyph.glyph.id),
                             }
                         });
 
@@ -285,7 +308,7 @@ where B: Backend
                             last_cached_glyph = Some(CachedGlyph {
                                 x,
                                 y,
-                                advance_width: font_asset.0.glyph(c).scaled(scale).h_metrics().advance_width,
+                                advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
                             });
                             last_cached_glyph
                         } else {
@@ -314,8 +337,8 @@ where B: Backend
                                     layers: 0..1,
                                 },
                                 hal::image::Offset {
-                                    x: rect.min.x as _,
-                                    y: rect.min.y as _,
+                                    x: rect.min[0] as _,
+                                    y: rect.min[1] as _,
                                     z: 0,
                                 },
                                 hal::image::Extent {
@@ -340,8 +363,6 @@ where B: Backend
                             .unwrap();
                     },
                     move |glyph| {
-                        let entity: u32 = glyph.z.to_bits();
-
                         let bounds_min_x = glyph.bounds.min.x as f32;
                         let bounds_min_y = glyph.bounds.min.y as f32;
                         let bounds_max_x = glyph.bounds.max.x as f32;
@@ -386,11 +407,11 @@ where B: Backend
                         let tex_coords_bounds = [uv.min.x, uv.min.y, uv.max.x, uv.max.y];
 
                         (
-                            entity,
+                            glyph.extra.entity.index(),
                             UiArgs {
                                 position: position.into(),
                                 dimensions: dimensions.into(),
-                                color: glyph.color.into(),
+                                color: glyph.extra.color().into(),
                                 tex_coords_bounds: tex_coords_bounds.into(),
                             },
                         )
@@ -408,6 +429,7 @@ where B: Backend
 
                         for (entity, (transform, ui_text, tint, text_editing, mut glyphs)) in glyph_query2.iter_entities_mut(world) {
                             let entity_id = entity.index();
+                            let scale = PxScale::from(ui_text.font_size);
 
                             let len = vertices[glyph_ctr..]
                                 .iter()
@@ -416,7 +438,7 @@ where B: Backend
 
                             let entity_vertices = vertices[glyph_ctr..glyph_ctr + len]
                                 .iter()
-                                .map(|v| v.1);
+                                .map(|(_, v)| *v);
                             glyph_ctr += len;
 
                             if let Some(mut glyph_data) = glyphs.as_mut() {
@@ -432,10 +454,10 @@ where B: Backend
                                 let font = font_storage
                                     .get(&ui_text.font)
                                     .expect("Font with rendered glyphs must be loaded");
-                                let scale = Scale::uniform(ui_text.font_size);
-                                let v_metrics = font.0.v_metrics(scale);
-                                let height = v_metrics.ascent - v_metrics.descent;
-                                let offset = (v_metrics.ascent + v_metrics.descent) / 2.0;
+                                let scaled_font = font.0.as_scaled(scale);
+
+                                let height = scaled_font.ascent() - scaled_font.descent();
+                                let offset = -(scaled_font.ascent() + scaled_font.descent()) / 2.0;
                                 let highlight = text_editing.cursor_position + text_editing.highlight_vector;
                                 // TODO: Clamp start/end to cached glyph count
                                 let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
@@ -462,8 +484,7 @@ where B: Backend
                                 if let Some(mut glyph_data) = glyphs {
                                     glyph_data.selection_vertices.extend(selection_ui_args_iter);
                                     glyph_data.height = height;
-                                    glyph_data.space_width =
-                                        font.0.glyph(' ').scaled(scale).h_metrics().advance_width;
+                                    glyph_data.space_width = scaled_font.h_advance(scaled_font.glyph_id(' '));
 
                                     update_cursor_position(
                                         &mut glyph_data,
@@ -480,47 +501,22 @@ where B: Backend
                     },
                     Ok(BrushAction::ReDraw) => {
                         for (entity, (transform, ui_text, tint, text_editing, glyphs)) in glyph_query2.iter_entities_mut(world) {
-                            let font = font_storage
-                                .get(&ui_text.font)
-                                .expect("Font with rendered glyphs must be loaded");
-                            let scale = Scale::uniform(ui_text.font_size);
-                            let v_metrics = font.0.v_metrics(scale);
-                            let height = v_metrics.ascent - v_metrics.descent;
-                            let offset = (v_metrics.ascent + v_metrics.descent) / 2.0;
+                            if let (Some(text_editing), Some(mut glyphs)) = (text_editing, glyphs) {
+                                let font = font_storage
+                                    .get(&ui_text.font)
+                                    .expect("Font with rendered glyphs must be loaded");
+                                let scale = PxScale::from(ui_text.font_size);
+                                let scaled_font = font.0.as_scaled(scale);
 
-                            if let (Some(text_editing), Some(mut glyph_data)) = (text_editing, glyphs) {
-
+                                let height = scaled_font.ascent() - scaled_font.descent();
+                                let offset = -(scaled_font.ascent() + scaled_font.descent()) / 2.0;
                                 let highlight = text_editing.cursor_position + text_editing.highlight_vector;
                                 // TODO: Clamp start/end to cached glyph count
                                 let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
                                 let end = cmp::max(highlight as usize, text_editing.cursor_position as usize);
 
-                                let color = if let Some(tint) = tint {
-                                    utils::mul_blend_srgba_to_lin_rgba_array(
-                                        &text_editing.selected_background_color,
-                                        &tint.0,
-                                    )
-                                } else {
-                                    utils::srgba_to_lin_rgba_array(text_editing.selected_background_color)
-                                };
-
-                                let selection_ui_args_iter = ui_text.cached_glyphs[start..end]
-                                    .iter()
-                                    .map(|g| UiArgs {
-                                        position: [g.x + g.advance_width / 2.0, g.y + offset].into(),
-                                        dimensions: [g.advance_width, height].into(),
-                                        tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
-                                        color: color.into(),
-                                    });
-
-                                //glyph_data.selection_vertices.clear();
-                                //glyph_data.selection_vertices.extend(selection_ui_args_iter);
-                                glyph_data.height = height;
-                                glyph_data.space_width =
-                                    font.0.glyph(' ').scaled(scale).h_metrics().advance_width;
-
                                 update_cursor_position(
-                                    &mut glyph_data,
+                                    &mut glyphs,
                                     &ui_text,
                                     &transform,
                                     text_editing.cursor_position as usize,

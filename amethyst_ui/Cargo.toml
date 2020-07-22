@@ -28,7 +28,7 @@ failure = "0.1"
 font-kit = "0.5"
 fnv = "1"
 glsl-layout = "0.3"
-glyph_brush = "0.6.3"
+glyph_brush = "0.7"
 lazy_static = "1.4"
 legion_transform = { git = "https://github.com/jojolepro/legion_transform" }
 log = "0.4.6"

@@ -90,21 +90,6 @@ pub struct UiGlyphs {
     pub(crate) space_width: f32,
 }
 
-#[derive(Copy, Clone, Debug)]
-enum FontState {
-    Ready(FontId),
-    NotFound,
-}
-
-impl FontState {
-    fn font_id(&self) -> Option<FontId> {
-        match self {
-            Self::Ready(font_id) => Some(*font_id),
-            Self::NotFound => None,
-        }
-    }
-}
-
 #[derive(Copy, Clone, Debug, Hash)]
 enum CustomLineBreaker {
     BuiltIn(BuiltInLineBreaker),
@@ -128,7 +113,8 @@ where B: Backend
             .initial_cache_size(INITIAL_CACHE_SIZE)
             .build();
 
-    let mut font_map = HashMap::<u32, FontState>::new();
+    // Maps asset handle ids to `GlyphBrush` `FontId`s
+    let mut font_map = HashMap::<u32, FontId>::new();
 
     SystemBuilder::<()>::new("UiGlyphsSystem")
         .write_resource::<Factory<B>>()
@@ -172,21 +158,23 @@ where B: Backend
                 .expect("Glyph texture is created synchronously");
 
             for (entity, (transform, mut ui_text, tint, text_editing)) in text_query.iter_entities_mut(world) {
+                ui_text.cached_glyphs.clear();
+
                 let mut cached_glyphs = Vec::new();
                 mem::swap(&mut ui_text.cached_glyphs, &mut cached_glyphs);
-                cached_glyphs.clear();
 
-                let font_asset = font_storage.get(&ui_text.font);
+                let (font, font_id) = match font_storage.get(&ui_text.font) {
+                    Some(font) => {
+                        let font_id = *font_map
+                            .entry(ui_text.font.id())
+                            .or_insert_with(|| {
+                                glyph_brush.add_font(font.0.clone())
+                            });
 
-                let font_lookup = font_map
-                    .entry(ui_text.font.id())
-                    .or_insert(FontState::NotFound);
-
-                if font_lookup.font_id().is_none() {
-                    if let Some(font) = font_storage.get(&ui_text.font) {
-                        *font_lookup = FontState::Ready(glyph_brush.add_font(font.0.clone()));
+                        (font, font_id)
                     }
-                }
+                    None => continue,
+                };
 
                 let tint_color = if let Some(tint) = tint {
                     utils::srgba_to_lin_rgba_array(tint.0)
@@ -199,128 +187,126 @@ where B: Backend
                     tint_color,
                 );
 
-                if let (Some(font_id), Some(font_asset)) = (font_lookup.font_id(), font_asset) {
-                    let scale = PxScale::from(ui_text.font_size);
-                    let scaled_font = font_asset.0.as_scaled(scale);
+                let scale = PxScale::from(ui_text.font_size);
+                let scaled_font = font.0.as_scaled(scale);
 
-                    let text = match (ui_text.password, text_editing) {
-                        (false, None) => vec![
-                            Text {
-                                text: &ui_text.text,
-                                scale,
-                                font_id,
-                                extra: ExtraTextData::new(entity, base_color),
-                            }
-                        ],
-                        (false, Some(text_editing)) => {
-                            let selected_color = utils::mul_blend_lin_rgba_arrays(
-                                utils::srgba_to_lin_rgba_array(text_editing.selected_text_color),
-                                tint_color,
-                            );
-
-                            if let Some(range) = selected_bytes(&text_editing, &ui_text.text) {
-                                let start = range.start;
-                                let end = range.end;
-
-                                vec![
-                                    Text {
-                                        text: &ui_text.text[..start],
-                                        scale,
-                                        font_id,
-                                        extra: ExtraTextData::new(entity, base_color),
-                                    },
-                                    Text {
-                                        text: &ui_text.text[start..end],
-                                        scale,
-                                        font_id,
-                                        extra: ExtraTextData::new(entity, base_color),
-                                    },
-                                    Text {
-                                        text: &ui_text.text[end..],
-                                        scale,
-                                        font_id,
-                                        extra: ExtraTextData::new(entity, base_color),
-                                    },
-                                ]
-                            } else {
-                                vec![
-                                    Text {
-                                        text: &ui_text.text,
-                                        scale,
-                                        font_id,
-                                        extra: ExtraTextData::new(entity, base_color),
-                                    },
-                                ]
-                            }
+                let text = match (ui_text.password, text_editing) {
+                    (false, None) => vec![
+                        Text {
+                            text: &ui_text.text,
+                            scale,
+                            font_id,
+                            extra: ExtraTextData::new(entity, base_color),
                         }
-                        _ => todo!()
-                    };
+                    ],
+                    (false, Some(text_editing)) => {
+                        let selected_color = utils::mul_blend_lin_rgba_arrays(
+                            utils::srgba_to_lin_rgba_array(text_editing.selected_text_color),
+                            tint_color,
+                        );
 
-                    let layout = match ui_text.line_mode {
-                        LineMode::Single => Layout::SingleLine {
-                            line_breaker: CustomLineBreaker::None,
-                            h_align: ui_text.align.horizontal_align(),
-                            v_align: ui_text.align.vertical_align(),
-                        },
-                        LineMode::Wrap => Layout::Wrap {
-                            line_breaker: CustomLineBreaker::BuiltIn(
-                                BuiltInLineBreaker::UnicodeLineBreaker,
-                            ),
-                            h_align: ui_text.align.horizontal_align(),
-                            v_align: ui_text.align.vertical_align(),
-                        },
-                    };
+                        if let Some(range) = selected_bytes(&text_editing, &ui_text.text) {
+                            let start = range.start;
+                            let end = range.end;
 
-                    let section = Section {
-                        screen_position: (
-                            transform.pixel_x + transform.pixel_width
-                                * ui_text.align.normalized_offset().0,
-                            -(transform.pixel_y + transform.pixel_height
-                                * ui_text.align.normalized_offset().1),
-                        ),
-                        bounds: (transform.pixel_width, transform.pixel_height),
-                        layout: Layout::default(),
-                        text,
-                    };
-
-                    let mut nonempty_cached_glyphs = glyph_brush
-                        .glyphs_custom_layout(&section, &layout)
-                        .map(|section_glyph| {
-                            CachedGlyph {
-                                x: section_glyph.glyph.position.x,
-                                y: section_glyph.glyph.position.y,
-                                advance_width: scaled_font.h_advance(section_glyph.glyph.id),
-                            }
-                        });
-
-                    let mut last_cached_glyph = Option::<CachedGlyph>::None;
-                    let all_glyphs = ui_text.text.chars().filter_map(move |c| {
-                        if c.is_whitespace() {
-                            let (x, y) = if let Some(last_cached_glyph) = last_cached_glyph {
-                                (
-                                    last_cached_glyph.x + last_cached_glyph.advance_width,
-                                    last_cached_glyph.y,
-                                )
-                            } else {
-                                (0.0, 0.0)
-                            };
-
-                            last_cached_glyph = Some(CachedGlyph {
-                                x,
-                                y,
-                                advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
-                            });
-                            last_cached_glyph
+                            vec![
+                                Text {
+                                    text: &ui_text.text[..start],
+                                    scale,
+                                    font_id,
+                                    extra: ExtraTextData::new(entity, base_color),
+                                },
+                                Text {
+                                    text: &ui_text.text[start..end],
+                                    scale,
+                                    font_id,
+                                    extra: ExtraTextData::new(entity, base_color),
+                                },
+                                Text {
+                                    text: &ui_text.text[end..],
+                                    scale,
+                                    font_id,
+                                    extra: ExtraTextData::new(entity, base_color),
+                                },
+                            ]
                         } else {
-                            last_cached_glyph = nonempty_cached_glyphs.next();
-                            last_cached_glyph
+                            vec![
+                                Text {
+                                    text: &ui_text.text,
+                                    scale,
+                                    font_id,
+                                    extra: ExtraTextData::new(entity, base_color),
+                                },
+                            ]
+                        }
+                    }
+                    _ => todo!()
+                };
+
+                let layout = match ui_text.line_mode {
+                    LineMode::Single => Layout::SingleLine {
+                        line_breaker: CustomLineBreaker::None,
+                        h_align: ui_text.align.horizontal_align(),
+                        v_align: ui_text.align.vertical_align(),
+                    },
+                    LineMode::Wrap => Layout::Wrap {
+                        line_breaker: CustomLineBreaker::BuiltIn(
+                            BuiltInLineBreaker::UnicodeLineBreaker,
+                        ),
+                        h_align: ui_text.align.horizontal_align(),
+                        v_align: ui_text.align.vertical_align(),
+                    },
+                };
+
+                let section = Section {
+                    screen_position: (
+                        transform.pixel_x + transform.pixel_width
+                            * ui_text.align.normalized_offset().0,
+                        -(transform.pixel_y + transform.pixel_height
+                            * ui_text.align.normalized_offset().1),
+                    ),
+                    bounds: (transform.pixel_width, transform.pixel_height),
+                    layout: Layout::default(),
+                    text,
+                };
+
+                let mut nonempty_cached_glyphs = glyph_brush
+                    .glyphs_custom_layout(&section, &layout)
+                    .map(|section_glyph| {
+                        CachedGlyph {
+                            x: section_glyph.glyph.position.x,
+                            y: section_glyph.glyph.position.y,
+                            advance_width: scaled_font.h_advance(section_glyph.glyph.id),
                         }
                     });
 
-                    cached_glyphs.extend(all_glyphs);
-                    glyph_brush.queue_custom_layout(section, &layout);
-                    mem::swap(&mut ui_text.cached_glyphs, &mut cached_glyphs);
-                }
+                let mut last_cached_glyph = Option::<CachedGlyph>::None;
+                let all_glyphs = ui_text.text.chars().filter_map(move |c| {
+                    if c.is_whitespace() {
+                        let (x, y) = if let Some(last_cached_glyph) = last_cached_glyph {
+                            (
+                                last_cached_glyph.x + last_cached_glyph.advance_width,
+                                last_cached_glyph.y,
+                            )
+                        } else {
+                            (0.0, 0.0)
+                        };
+
+                        last_cached_glyph = Some(CachedGlyph {
+                            x,
+                            y,
+                            advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
+                        });
+                        last_cached_glyph
+                    } else {
+                        last_cached_glyph = nonempty_cached_glyphs.next();
+                        last_cached_glyph
+                    }
+                });
+
+                cached_glyphs.extend(all_glyphs);
+                glyph_brush.queue_custom_layout(section, &layout);
+                mem::swap(&mut ui_text.cached_glyphs, &mut cached_glyphs);
             }
 
             loop {

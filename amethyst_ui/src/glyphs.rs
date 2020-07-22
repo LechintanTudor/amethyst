@@ -108,7 +108,7 @@ impl LineBreaker for CustomLineBreaker {
 pub fn build_ui_glyphs_system<B>(world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
 where B: Backend
 {
-    let mut glyph_brush: GlyphBrush<(u32, UiArgs), ExtraTextData> =
+    let mut glyph_brush: GlyphBrush<(Entity, UiArgs), ExtraTextData> =
         GlyphBrushBuilder::using_fonts(Vec::<FontArc>::new())
             .initial_cache_size(INITIAL_CACHE_SIZE)
             .build();
@@ -220,7 +220,7 @@ where B: Backend
                                     text: &ui_text.text[start..end],
                                     scale,
                                     font_id,
-                                    extra: ExtraTextData::new(entity, base_color),
+                                    extra: ExtraTextData::new(entity, selected_color),
                                 },
                                 Text {
                                     text: &ui_text.text[end..],
@@ -393,7 +393,7 @@ where B: Backend
                         let tex_coords_bounds = [uv.min.x, uv.min.y, uv.max.x, uv.max.y];
 
                         (
-                            glyph.extra.entity.index(),
+                            glyph.extra.entity,
                             UiArgs {
                                 position: position.into(),
                                 dimensions: dimensions.into(),
@@ -414,12 +414,11 @@ where B: Backend
                         }
 
                         for (entity, (transform, ui_text, tint, text_editing, mut glyphs)) in glyph_query2.iter_entities_mut(world) {
-                            let entity_id = entity.index();
                             let scale = PxScale::from(ui_text.font_size);
 
                             let len = vertices[glyph_ctr..]
                                 .iter()
-                                .take_while(|(id, _)| *id == entity_id)
+                                .take_while(|(e, _)| *e == entity)
                                 .count();
 
                             let entity_vertices = vertices[glyph_ctr..glyph_ctr + len]

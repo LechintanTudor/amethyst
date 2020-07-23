@@ -270,41 +270,51 @@ where B: Backend
                     text,
                 };
 
-                let mut nonempty_cached_glyphs = glyph_brush
-                    .glyphs_custom_layout(&section, &layout)
-                    .map(|section_glyph| {
-                        CachedGlyph {
-                            x: section_glyph.glyph.position.x,
-                            y: section_glyph.glyph.position.y,
-                            advance_width: scaled_font.h_advance(section_glyph.glyph.id),
-                        }
-                    });
+                let mut visible_glyphs_iter = glyph_brush
+                    .glyphs_custom_layout(&section, &layout);
 
                 let mut last_cached_glyph = Option::<CachedGlyph>::None;
-                let all_glyphs = ui_text.text.chars().filter_map(move |c| {
-                    if c.is_whitespace() {
-                        let (x, y) = if let Some(last_cached_glyph) = last_cached_glyph {
-                            (
-                                last_cached_glyph.x + last_cached_glyph.advance_width,
-                                last_cached_glyph.y,
-                            )
-                        } else {
-                            (0.0, 0.0)
-                        };
+                let mut last_section_glyph = visible_glyphs_iter.next();
 
-                        last_cached_glyph = Some(CachedGlyph {
-                            x,
-                            y,
-                            advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
-                        });
-                        last_cached_glyph
-                    } else {
-                        last_cached_glyph = nonempty_cached_glyphs.next();
-                        last_cached_glyph
+                let all_glyphs_iter = ui_text.text.chars().map(|c| {
+                    let (x, y) = match last_cached_glyph {
+                        Some(last_cached_glyph) => (
+                            last_cached_glyph.x + last_cached_glyph.advance_width,
+                            last_cached_glyph.y,
+                        ),
+                        None => (0.0, 0.0),
+                    };
+
+                    match last_section_glyph {
+                        Some(section_glyph) => {
+                            if scaled_font.glyph_id(c) == section_glyph.glyph.id {
+                                let cached_glyph = CachedGlyph {
+                                    x: section_glyph.glyph.position.x,
+                                    y: section_glyph.glyph.position.y,
+                                    advance_width: scaled_font.h_advance(section_glyph.glyph.id),
+                                };
+
+                                last_section_glyph = visible_glyphs_iter.next();
+                                cached_glyph
+                            } else {
+                                CachedGlyph {
+                                    x,
+                                    y,
+                                    advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
+                                }
+                            }
+                        }
+                        None => {
+                            CachedGlyph {
+                                x,
+                                y,
+                                advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
+                            }
+                        }
                     }
                 });
 
-                cached_glyphs.extend(all_glyphs);
+                cached_glyphs.extend(all_glyphs_iter);
                 glyph_brush.queue_custom_layout(section, &layout);
                 mem::swap(&mut ui_text.cached_glyphs, &mut cached_glyphs);
             }
@@ -442,7 +452,7 @@ where B: Backend
                                 let scaled_font = font.0.as_scaled(scale);
 
                                 let height = scaled_font.ascent() - scaled_font.descent();
-                                let offset = -(scaled_font.ascent() + scaled_font.descent()) / 2.0;
+                                let offset = (scaled_font.ascent() + scaled_font.descent()) / 2.0;
                                 let highlight = text_editing.cursor_position + text_editing.highlight_vector;
                                 // TODO: Clamp start/end to cached glyph count
                                 let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
@@ -494,7 +504,7 @@ where B: Backend
                                 let scaled_font = font.0.as_scaled(scale);
 
                                 let height = scaled_font.ascent() - scaled_font.descent();
-                                let offset = -(scaled_font.ascent() + scaled_font.descent()) / 2.0;
+                                let offset = (scaled_font.ascent() + scaled_font.descent()) / 2.0;
                                 let highlight = text_editing.cursor_position + text_editing.highlight_vector;
                                 // TODO: Clamp start/end to cached glyph count
                                 let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);

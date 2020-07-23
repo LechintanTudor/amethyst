@@ -290,7 +290,7 @@ where B: Backend
                             if scaled_font.glyph_id(c) == section_glyph.glyph.id {
                                 let cached_glyph = CachedGlyph {
                                     x: section_glyph.glyph.position.x,
-                                    y: section_glyph.glyph.position.y,
+                                    y: -section_glyph.glyph.position.y,
                                     advance_width: scaled_font.h_advance(section_glyph.glyph.id),
                                 };
 
@@ -416,7 +416,7 @@ where B: Backend
 
                 match action {
                     Ok(BrushAction::Draw(vertices)) => {
-                        let mut glyph_ctr = 0;
+                        let mut current_glyph = 0;
 
                         for (mut glyph_data,) in glyph_query.iter_mut(world) {
                             glyph_data.selection_vertices.clear();
@@ -426,21 +426,19 @@ where B: Backend
                         for (entity, (transform, ui_text, tint, text_editing, mut glyphs)) in glyph_query2.iter_entities_mut(world) {
                             let scale = PxScale::from(ui_text.font_size);
 
-                            let len = vertices[glyph_ctr..]
+                            let vertices = vertices[current_glyph..]
                                 .iter()
                                 .take_while(|(e, _)| *e == entity)
-                                .count();
-
-                            let entity_vertices = vertices[glyph_ctr..glyph_ctr + len]
-                                .iter()
-                                .map(|(_, v)| *v);
-                            glyph_ctr += len;
+                                .map(|(_, v)| {
+                                    current_glyph += 1;
+                                    *v
+                                });
 
                             if let Some(mut glyph_data) = glyphs.as_mut() {
-                                glyph_data.vertices.extend(entity_vertices);
+                                glyph_data.vertices.extend(vertices);
                             } else {
                                 commands.add_component(entity, UiGlyphs {
-                                    vertices: entity_vertices.collect(),
+                                    vertices: vertices.collect(),
                                     ..UiGlyphs::default()
                                 });
                             }
@@ -453,10 +451,8 @@ where B: Backend
 
                                 let height = scaled_font.ascent() - scaled_font.descent();
                                 let offset = (scaled_font.ascent() + scaled_font.descent()) / 2.0;
-                                let highlight = text_editing.cursor_position + text_editing.highlight_vector;
-                                // TODO: Clamp start/end to cached glyph count
-                                let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
-                                let end = cmp::max(highlight as usize, text_editing.cursor_position as usize);
+
+                                let highlight_range = highlighted_glyphs_range(&text_editing, &ui_text);
 
                                 let color = if let Some(tint) = tint {
                                     utils::mul_blend_srgba_to_lin_rgba_array(
@@ -467,7 +463,7 @@ where B: Backend
                                     utils::srgba_to_lin_rgba_array(text_editing.selected_background_color)
                                 };
 
-                                let selection_ui_args_iter = ui_text.cached_glyphs[start..end]
+                                let selection_ui_args_iter = ui_text.cached_glyphs[highlight_range]
                                     .iter()
                                     .map(|g| UiArgs {
                                         position: [g.x + g.advance_width / 2.0, g.y + offset].into(),
@@ -502,13 +498,7 @@ where B: Backend
                                     .expect("Font with rendered glyphs must be loaded");
                                 let scale = PxScale::from(ui_text.font_size);
                                 let scaled_font = font.0.as_scaled(scale);
-
-                                let height = scaled_font.ascent() - scaled_font.descent();
                                 let offset = (scaled_font.ascent() + scaled_font.descent()) / 2.0;
-                                let highlight = text_editing.cursor_position + text_editing.highlight_vector;
-                                // TODO: Clamp start/end to cached glyph count
-                                let start = cmp::min(highlight as usize, text_editing.cursor_position as usize);
-                                let end = cmp::max(highlight as usize, text_editing.cursor_position as usize);
 
                                 update_cursor_position(
                                     &mut glyphs,
@@ -619,4 +609,15 @@ fn selected_bytes(text_editing: &TextEditing, text: &str) -> Option<Range<usize>
     } else {
         Some(start_byte..end_byte)
     }
+}
+
+fn highlighted_glyphs_range(text_editing: &TextEditing, ui_text: &UiText) -> Range<usize> {
+    let cursor_position = text_editing.cursor_position as usize;
+    let highlight_position = (text_editing.cursor_position + text_editing.highlight_vector) as usize;
+    let glyph_count = ui_text.cached_glyphs.len();
+
+    let start = cursor_position.min(highlight_position).min(glyph_count);
+    let end = cursor_position.max(highlight_position).min(glyph_count);
+
+    start..end
 }

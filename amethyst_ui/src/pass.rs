@@ -167,10 +167,17 @@ where B: Backend
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, AsStd140)]
 pub(crate) struct UiArgs {
-    pub(crate) position: vec2,
-    pub(crate) dimensions: vec2,
-    pub(crate) color: vec4,
-    pub(crate) tex_coords_bounds: vec4,
+    // [center_x, center_y]
+    pub position: vec2,
+    // [width, height]
+    pub dimensions: vec2,
+    // [left, top, right, bottom] texture coordinates
+    pub tex_coords_bounds: vec4,
+    // Linear rgba color
+    pub color: vec4,
+    // Used for Metal support. Must be `[1.0, 1.0, 1.0, 0.0]` when sampling
+    // from glyph texture and `[0.0, 0.0, 0.0, 0.0]` otherwise.
+    pub color_bias: vec4,
 }
 
 impl AsVertex for UiArgs {
@@ -178,8 +185,9 @@ impl AsVertex for UiArgs {
         VertexFormat::new((
             (Format::Rg32Sfloat, "position"),
             (Format::Rg32Sfloat, "dimensions"),
-            (Format::Rgba32Sfloat, "color"),
             (Format::Rgba32Sfloat, "tex_coords_bounds"),
+            (Format::Rgba32Sfloat, "color"),
+            (Format::Rgba32Sfloat, "color_bias"),
         ))
     }
 }
@@ -287,21 +295,21 @@ where B: Backend
                             (true, true) => (glyph_data.space_width, glyph_data.height),
                         };
 
-                        let base_x = glyph_data.cursor_position.0 + w * 0.5;
-                        let base_y = glyph_data.cursor_position.1 - (glyph_data.height - h) * 0.5;
+                        let base_x = glyph_data.cursor_position.0 + w / 2.0;
+                        let base_y = glyph_data.cursor_position.1 - (glyph_data.height - h) / 2.0;
 
-                        let min_x = transform.pixel_x + transform.pixel_width * -0.5;
-                        let max_x = transform.pixel_x + transform.pixel_width * 0.5;
-                        let min_y = transform.pixel_y + transform.pixel_height * -0.5;
-                        let max_y = transform.pixel_y + transform.pixel_height * 0.5;
+                        let min_x = transform.pixel_x - transform.pixel_width / 2.0;
+                        let max_x = transform.pixel_x + transform.pixel_width / 2.0;
+                        let min_y = transform.pixel_y - transform.pixel_height / 2.0;
+                        let max_y = transform.pixel_y + transform.pixel_height / 2.0;
 
-                        let left = (base_x - w * 0.5).max(min_x).min(max_x);
-                        let right = (base_x + w * 0.5).max(min_x).min(max_x);
-                        let top = (base_y - h * 0.5).max(min_y).min(max_y);
-                        let bottom = (base_y + h * 0.5).max(min_y).min(max_y);
+                        let left = (base_x - w / 2.0).max(min_x).min(max_x);
+                        let right = (base_x + w / 2.0).max(min_x).min(max_x);
+                        let top = (base_y - h / 2.0).max(min_y).min(max_y);
+                        let bottom = (base_y + h / 2.0).max(min_y).min(max_y);
 
-                        let x = (left + right) * 0.5;
-                        let y = (top + bottom) * 0.5;
+                        let x = (left + right) / 2.0;
+                        let y = (top + bottom) / 2.0;
                         let w = right - left;
                         let h = bottom - top;
 
@@ -312,6 +320,7 @@ where B: Backend
                                 dimensions: [w, h].into(),
                                 tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
                                 color: [1.0, 1.0, 1.0, 1.0].into(),
+                                color_bias: [0.0, 0.0, 0.0, 0.0].into(),
                             }),
                         );
                     }
@@ -452,8 +461,9 @@ where B: Backend
                 let args = UiArgs {
                     position: [transform.pixel_x, transform.pixel_y].into(),
                     dimensions: [transform.pixel_width, transform.pixel_height].into(),
+                    tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
                     color: color.into(),
-                    tex_coords_bounds: [0.0_f32, 0.0, 1.0, 1.0].into(),
+                    color_bias: [0.0, 0.0, 0.0, 0.0].into(),
                 };
 
                 batches.insert(texture_id, Some(args));
@@ -472,8 +482,9 @@ where B: Backend
                 let args = UiArgs {
                     position: [transform.pixel_x, transform.pixel_y].into(),
                     dimensions: [transform.pixel_width, transform.pixel_height].into(),
-                    color: color.into(),
                     tex_coords_bounds: [*left, *top, *right, *bottom].into(),
+                    color: color.into(),
+                    color_bias: [0.0, 0.0, 0.0, 0.0].into(),
                 };
 
                 batches.insert(texture_id, Some(args));
@@ -497,13 +508,14 @@ where B: Backend
                     let args = UiArgs {
                         position: [transform.pixel_x, transform.pixel_y].into(),
                         dimensions: [transform.pixel_width, transform.pixel_height].into(),
-                        color: color.into(),
                         tex_coords_bounds: [
                             tex_coords.left,
                             tex_coords.top,
                             tex_coords.right,
                             tex_coords.bottom,
                         ].into(),
+                        color: color.into(),
+                        color_bias: [0.0, 0.0, 0.0, 0.0].into(),
                     };
 
                     batches.insert(texture_id, Some(args));
@@ -519,8 +531,9 @@ where B: Backend
             let args = UiArgs {
                 position: [transform.pixel_x, transform.pixel_y].into(),
                 dimensions: [transform.pixel_width, transform.pixel_height].into(),
+                tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
                 color: color.into(),
-                tex_coords_bounds: [0.0_f32, 0.0, 1.0, 1.0].into(),
+                color_bias: [0.0, 0.0, 0.0, 0.0].into(),
             };
 
             batches.insert(white_texture_id, Some(args));

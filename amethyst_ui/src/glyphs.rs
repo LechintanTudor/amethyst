@@ -407,8 +407,9 @@ where B: Backend
                             UiArgs {
                                 position: position.into(),
                                 dimensions: dimensions.into(),
-                                color: glyph.extra.color().into(),
                                 tex_coords_bounds: tex_coords_bounds.into(),
+                                color: glyph.extra.color().into(),
+                                color_bias: [1.0, 1.0, 1.0, 0.0].into(),
                             },
                         )
                     },
@@ -469,6 +470,7 @@ where B: Backend
                                         dimensions: [g.advance_width, height].into(),
                                         tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
                                         color: color.into(),
+                                        color_bias: [0.0, 0.0, 0.0, 0.0].into(),
                                     });
 
                                 if let Some(mut glyph_data) = glyphs {
@@ -548,7 +550,7 @@ where B: Backend
         .with_data_height(height)
         .with_data(vec![R8Unorm { repr: [0] }; (width * height) as _])
         // This swizzle is required when working with `R8Unorm` on metal.
-        // Glyph texture is biased towards 1.0 using "color_bias" attribute instead.
+        // Glyph texture is biased towards 1.0 using the "color_bias" attribute.
         .with_swizzle(Swizzle(C::One, C::One, C::One, C::R))
         .build(
             ImageState {

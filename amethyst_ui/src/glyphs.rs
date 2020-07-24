@@ -549,9 +549,9 @@ where B: Backend
         .with_data_width(width)
         .with_data_height(height)
         .with_data(vec![R8Unorm { repr: [0] }; (width * height) as _])
-        // This swizzle is required when working with `R8Unorm` on metal.
+        // This swizzle is required when working with `R8Unorm` on Metal.
         // Glyph texture is biased towards 1.0 using the "color_bias" attribute.
-        .with_swizzle(Swizzle(C::One, C::One, C::One, C::R))
+        .with_swizzle(Swizzle(C::Zero, C::Zero, C::Zero, C::R))
         .build(
             ImageState {
                 queue,

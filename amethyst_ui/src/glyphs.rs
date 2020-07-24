@@ -424,8 +424,6 @@ where B: Backend
                         }
 
                         for (entity, (transform, ui_text, tint, text_editing, mut glyphs)) in glyph_query2.iter_entities_mut(world) {
-                            let scale = PxScale::from(ui_text.font_size);
-
                             let vertices = vertices[current_glyph..]
                                 .iter()
                                 .take_while(|(e, _)| *e == entity)
@@ -447,6 +445,7 @@ where B: Backend
                                 let font = font_storage
                                     .get(&ui_text.font)
                                     .expect("Font with rendered glyphs must be loaded");
+                                let scale = PxScale::from(ui_text.font_size);
                                 let scaled_font = font.0.as_scaled(scale);
 
                                 let height = scaled_font.ascent() - scaled_font.descent();
@@ -489,7 +488,7 @@ where B: Backend
                         }
 
                         break;
-                    },
+                    }
                     Ok(BrushAction::ReDraw) => {
                         for (entity, (transform, ui_text, tint, text_editing, glyphs)) in glyph_query2.iter_entities_mut(world) {
                             if let (Some(text_editing), Some(mut glyphs)) = (text_editing, glyphs) {

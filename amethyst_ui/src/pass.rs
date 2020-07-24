@@ -49,13 +49,13 @@ use thread_profiler::profile_scope;
 
 lazy_static::lazy_static! {
     static ref UI_VERTEX: SpirvShader = SpirvShader::from_bytes(
-        include_bytes!("../compiled/ui2.vert.spv"),
+        include_bytes!("../compiled/ui.vert.spv"),
         ShaderStageFlags::VERTEX,
         "main",
     ).unwrap();
 
     static ref UI_FRAGMENT: SpirvShader = SpirvShader::from_bytes(
-        include_bytes!("../compiled/ui2.frag.spv"),
+        include_bytes!("../compiled/ui.frag.spv"),
         ShaderStageFlags::FRAGMENT,
         "main",
     ).unwrap();

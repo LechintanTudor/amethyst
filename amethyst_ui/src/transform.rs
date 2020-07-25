@@ -27,10 +27,11 @@ pub struct UiTransform {
 
 impl UiTransform {
     pub fn new<S>(id: S, anchor: Anchor, pivot: Anchor, x: f32, y: f32, z: f32, width: f32, height: f32) -> Self
-    where S: Into<String>
+    where
+        S: ToString
     {
         Self {
-            id: id.into(),
+            id: id.to_string(),
             anchor,
             pivot,
             stretch: Stretch::NoStretch,

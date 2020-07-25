@@ -194,7 +194,11 @@ fn modify_transform_bounds(
             transform.width,
             parent_pixel_height - y_margin * 2.0,
         ),
-        Stretch::XY { x_margin, y_margin, keep_aspect_ratio } => {
+        Stretch::XY { x_margin, y_margin, keep_aspect_ratio: false } => (
+            parent_pixel_width - x_margin * 2.0,
+            parent_pixel_height - y_margin * 2.0,
+        ),
+        Stretch::XY { x_margin, y_margin, keep_aspect_ratio: true } => {
             let scale = f32::min(
                 (parent_pixel_width - x_margin * 2.0) / transform.width,
                 (parent_pixel_height - y_margin * 2.0) / transform.height,

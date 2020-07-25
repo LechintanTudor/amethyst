@@ -4,6 +4,7 @@
 #![allow(unused_variables)]
 
 pub use self::{
+    button::*,
     bundle::UiBundle,
     drag::Draggable,
     event::{UiEvent, UiEventType},
@@ -14,7 +15,9 @@ pub use self::{
     selection::{Selected},
     text::{LineMode, UiText, TextEditing},
     transform::UiTransform,
+    widget::*,
 };
+pub use amethyst_core::ecs::entity::Entity;
 pub use legion_transform::components::Parent;
 
 mod button;
@@ -34,3 +37,4 @@ mod text;
 mod text_editing;
 mod transform;
 mod utils;
+mod widget;

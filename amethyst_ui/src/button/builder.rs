@@ -1,4 +1,4 @@
-use crate::{Anchor, FontAsset, Stretch, UiImage};
+use crate::{Anchor, FontAsset, Parent, Stretch, UiButton, UiImage, UiText, UiTransform};
 use amethyst_assets::Handle;
 use amethyst_core::{
     ecs::{
@@ -63,7 +63,7 @@ pub struct UiButtonBuilder {
     text_color: Srgba,
     font: Option<Handle<FontAsset>>,
     font_size: f32,
-    image: Option<UiImage>,
+    image: UiImage,
     parent: Option<Entity>,
 }
 
@@ -82,7 +82,7 @@ impl Default for UiButtonBuilder {
             text_color: Srgba::from_components(DEFAULT_TEXT_COLOR),
             font: None,
             font_size: DEFAULT_FONT_SIZE,
-            image: Some(UiImage::SolidColor(Srgba::from_components(DEFAULT_BACKGROUND_COLOR))),
+            image: UiImage::SolidColor(Srgba::from_components(DEFAULT_BACKGROUND_COLOR)),
             parent: None,
         }
     }
@@ -145,7 +145,7 @@ impl UiButtonBuilder {
     }
 
     pub fn with_image(mut self, image: UiImage) -> Self {
-        self.image = Some(image);
+        self.image = image;
         self
     }
 
@@ -154,10 +154,63 @@ impl UiButtonBuilder {
         self
     }
 
-    pub fn build<T>(self, target: T) -> Entity
+    pub fn build<T>(self, target: &mut T) -> UiButton
     where
         T: UiButtonBuilderTarget
     {
-        todo!()
+        // Image
+        let image_entity = target.create_entity();
+        target.add_component(
+            image_entity,
+            UiTransform::new(
+                "PLACEHOLDER",
+                self.anchor,
+                self.pivot,
+                self.x,
+                self.y,
+                self.z,
+                self.width,
+                self.height,
+            ),
+        );
+        target.add_component(image_entity, self.image);
+
+        if let Some(parent) = self.parent {
+            target.add_component(image_entity, parent);
+        }
+
+        // Text
+        let text_entity = target.create_entity();
+        target.add_component(
+            text_entity,
+            UiTransform::new(
+                "PLACEHOLDER",
+                Anchor::Middle,
+                Anchor::Middle,
+                0.0,
+                0.0,
+                0.01,
+                0.0,
+                0.0,
+            )
+            .into_transparent()
+            .with_stretch(Stretch::XY {
+                x_margin: 0.0,
+                y_margin: 0.0,
+                keep_aspect_ratio: false,
+            }),
+        );
+        target.add_component(
+            text_entity,
+            UiText::new(
+                self.font.expect("TODO: Implement default font"),
+                self.text,
+                self.text_color,
+                self.font_size,
+            ),
+        );
+        target.add_component(text_entity, Parent(image_entity));
+
+        UiButton::new(text_entity, image_entity)
     }
 }

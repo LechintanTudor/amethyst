@@ -31,9 +31,12 @@ pub struct UiText {
 }
 
 impl UiText {
-    pub fn new(font: Handle<FontAsset>, text: String, color: Srgba, font_size: f32) -> Self {
+    pub fn new<S>(font: Handle<FontAsset>, text: S, color: Srgba, font_size: f32) -> Self
+    where
+        S: ToString
+    {
         Self {
-            text,
+            text: text.to_string(),
             font_size,
             color,
             font,

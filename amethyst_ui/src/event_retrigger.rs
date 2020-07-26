@@ -11,7 +11,7 @@ use std::ops::DerefMut;
 pub trait EventReceiver<T> {
     fn receive_one(&mut self, value: &T);
 
-    fn receive<I>(&mut self, values: &[T]);
+    fn receive(&mut self, values: &[T]);
 }
 
 impl<T> EventReceiver<T> for EventChannel<T>
@@ -22,7 +22,7 @@ where
         self.single_write(value.clone());
     }
 
-    fn receive<I>(&mut self, values: &[T]) {
+    fn receive(&mut self, values: &[T]) {
         self.iter_write(values.iter().cloned());
     }
 }

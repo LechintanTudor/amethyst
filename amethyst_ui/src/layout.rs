@@ -120,7 +120,8 @@ fn solve_transform<E>(
     world: &mut E,
     solved_transforms: &mut BitSet
 )
-where E: EntityStore
+where
+    E: EntityStore
 {
     // Mark transform as solved and skip solved transforms
     if !solved_transforms.insert(entity.index() as usize) {

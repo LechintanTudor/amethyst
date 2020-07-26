@@ -285,7 +285,7 @@ where B: Backend
                         None => (0.0, 0.0),
                     };
 
-                    match last_section_glyph {
+                    let cached_glyph = match last_section_glyph {
                         Some(section_glyph) => {
                             if scaled_font.glyph_id(c) == section_glyph.glyph.id {
                                 let cached_glyph = CachedGlyph {
@@ -311,7 +311,10 @@ where B: Backend
                                 advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
                             }
                         }
-                    }
+                    };
+
+                    last_cached_glyph = Some(cached_glyph);
+                    cached_glyph
                 });
 
                 cached_glyphs.extend(all_glyphs_iter);

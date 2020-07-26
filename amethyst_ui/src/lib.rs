@@ -8,6 +8,7 @@ pub use self::{
     bundle::UiBundle,
     drag::Draggable,
     event::{UiEvent, UiEventType},
+    event_retrigger::*,
     format::{FontAsset, TtfFormat},
     image::UiImage,
     layout::{Anchor, ScaleMode, Stretch},
@@ -24,6 +25,7 @@ mod button;
 mod bundle;
 mod drag;
 mod event;
+mod event_retrigger;
 mod format;
 mod glyphs;
 mod image;

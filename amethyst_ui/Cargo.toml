@@ -36,7 +36,7 @@ paste = "0.1"
 rand = "0.7"
 ron = "0.5"
 serde = { version = "1.0", features = ["derive"] }
-smallvec = "1.2"
+smallvec = "1.4"
 thread_profiler = { version = "0.3", optional = true }
 unicode-normalization = "0.1"
 unicode-segmentation = "1.6"

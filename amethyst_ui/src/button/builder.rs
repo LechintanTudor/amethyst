@@ -1,4 +1,7 @@
-use crate::{Anchor, FontAsset, Parent, Stretch, UiButton, UiImage, UiText, UiTransform};
+use crate::{
+    Anchor, FontAsset, Parent, Stretch, UiButton, UiButtonActionType,
+    UiImage, UiText, UiTransform,
+};
 use amethyst_assets::Handle;
 use amethyst_core::{
     ecs::{
@@ -7,6 +10,7 @@ use amethyst_core::{
     },
 };
 use amethyst_rendy::palette::Srgba;
+use smallvec::SmallVec;
 
 const DEFAULT_Z: f32 = 1.0;
 const DEFAULT_WIDTH: f32 = 128.0;
@@ -65,6 +69,10 @@ pub struct UiButtonBuilder {
     font_size: f32,
     image: UiImage,
     parent: Option<Entity>,
+    on_click_start: SmallVec<[UiButtonActionType; 2]>,
+    on_click_stop: SmallVec<[UiButtonActionType; 2]>,
+    on_hover_start: SmallVec<[UiButtonActionType; 2]>,
+    on_hover_stop: SmallVec<[UiButtonActionType; 2]>,
 }
 
 impl Default for UiButtonBuilder {
@@ -84,6 +92,10 @@ impl Default for UiButtonBuilder {
             font_size: DEFAULT_FONT_SIZE,
             image: UiImage::SolidColor(Srgba::from_components(DEFAULT_BACKGROUND_COLOR)),
             parent: None,
+            on_click_start: SmallVec::new(),
+            on_click_stop: SmallVec::new(),
+            on_hover_start: SmallVec::new(),
+            on_hover_stop: SmallVec::new(),
         }
     }
 }
@@ -134,6 +146,18 @@ impl UiButtonBuilder {
         self
     }
 
+    pub fn with_hover_text_color(mut self, text_color: Srgba) -> Self {
+        self.on_hover_start.push(UiButtonActionType::SetTextColor(text_color));
+        self.on_hover_stop.push(UiButtonActionType::UnsetTextColor(text_color));
+        self
+    }
+
+    pub fn with_press_text_color(mut self, text_color: Srgba) -> Self {
+        self.on_click_start.push(UiButtonActionType::SetTextColor(text_color));
+        self.on_click_stop.push(UiButtonActionType::UnsetTextColor(text_color));
+        self
+    }
+
     pub fn with_font(mut self, font: Handle<FontAsset>) -> Self {
         self.font = Some(font);
         self
@@ -146,6 +170,18 @@ impl UiButtonBuilder {
 
     pub fn with_image(mut self, image: UiImage) -> Self {
         self.image = image;
+        self
+    }
+
+    pub fn with_hover_image(mut self, image: UiImage) -> Self {
+        self.on_hover_start.push(UiButtonActionType::SetImage(image.clone()));
+        self.on_hover_stop.push(UiButtonActionType::UnsetImage(image));
+        self
+    }
+
+    pub fn with_press_image(mut self, image: UiImage) -> Self {
+        self.on_click_start.push(UiButtonActionType::SetImage(image.clone()));
+        self.on_click_stop.push(UiButtonActionType::UnsetImage(image));
         self
     }
 

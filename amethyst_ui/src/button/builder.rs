@@ -194,10 +194,10 @@ impl UiButtonBuilder {
     where
         T: UiButtonBuilderTarget
     {
-        // Image
-        let image_entity = target.create_entity();
+        let entity = target.create_entity();
+
         target.add_component(
-            image_entity,
+            entity,
             UiTransform::new(
                 "PLACEHOLDER",
                 self.anchor,
@@ -209,35 +209,15 @@ impl UiButtonBuilder {
                 self.height,
             ),
         );
-        target.add_component(image_entity, self.image);
 
         if let Some(parent) = self.parent {
-            target.add_component(image_entity, parent);
+            target.add_component(entity, parent);
         }
 
-        // Text
-        let text_entity = target.create_entity();
+        target.add_component(entity, self.image);
+
         target.add_component(
-            text_entity,
-            UiTransform::new(
-                "PLACEHOLDER",
-                Anchor::Middle,
-                Anchor::Middle,
-                0.0,
-                0.0,
-                0.01,
-                0.0,
-                0.0,
-            )
-            .into_transparent()
-            .with_stretch(Stretch::XY {
-                x_margin: 0.0,
-                y_margin: 0.0,
-                keep_aspect_ratio: false,
-            }),
-        );
-        target.add_component(
-            text_entity,
+            entity,
             UiText::new(
                 self.font.expect("TODO: Implement default font"),
                 self.text,
@@ -245,8 +225,7 @@ impl UiButtonBuilder {
                 self.font_size,
             ),
         );
-        target.add_component(text_entity, Parent(image_entity));
 
-        UiButton::new(text_entity, image_entity)
+        UiButton::new(entity)
     }
 }

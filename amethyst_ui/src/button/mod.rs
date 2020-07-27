@@ -17,9 +17,8 @@ use crate::{
 
 define_widget!(
     UiButton =>
-        entities: [text_entity, image_entity]
+        entities: [entity]
         components: [
-            (has UiTransform as transform on image_entity),
-            (has UiTransform as text_transform on text_entity)
+            (has UiTransform as transform on entity)
         ]
 );

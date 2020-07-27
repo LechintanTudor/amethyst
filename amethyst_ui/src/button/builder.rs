@@ -1,6 +1,6 @@
 use crate::{
-    Anchor, FontAsset, Parent, Stretch, UiButton, UiButtonActionType,
-    UiImage, UiText, UiTransform,
+    Anchor, FontAsset, Parent, Stretch, UiButton, UiButtonAction, UiButtonActionType,
+    UiButtonActionRetrigger, UiImage, UiText, UiTransform,
 };
 use amethyst_assets::Handle;
 use amethyst_core::{
@@ -226,6 +226,41 @@ impl UiButtonBuilder {
             ),
         );
 
+        if !self.on_click_start.is_empty()
+            || !self.on_click_stop.is_empty()
+            || !self.on_hover_start.is_empty()
+            || !self.on_hover_stop.is_empty()
+        {
+            target.add_component(
+                entity,
+                UiButtonActionRetrigger {
+                    on_click_start: actions_with_target(
+                        self.on_click_start.into_iter(),
+                        entity,
+                    ),
+                    on_click_stop: actions_with_target(
+                        self.on_click_stop.into_iter(),
+                        entity,
+                    ),
+                    on_hover_start: actions_with_target(
+                        self.on_hover_start.into_iter(),
+                        entity,
+                    ),
+                    on_hover_stop: actions_with_target(
+                        self.on_hover_stop.into_iter(),
+                        entity,
+                    ),
+                },
+            );
+        }
+
         UiButton::new(entity)
     }
+}
+
+fn actions_with_target<I>(actions: I, target: Entity) -> Vec<UiButtonAction>
+where
+    I: Iterator<Item = UiButtonActionType>,
+{
+    actions.map(|action| UiButtonAction::new(target, action)).collect()
 }

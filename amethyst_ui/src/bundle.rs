@@ -52,6 +52,8 @@ where T: BindingTypes
         builder.add_system(Stage::Logic, systems::build_ui_mouse_system::<T>);
         builder.add_system(Stage::Logic, systems::build_drag_widget_system::<T>);
         builder.add_system(Stage::Logic, systems::build_text_editing_input_system);
+        builder.add_system(Stage::Logic, systems::build_ui_button_action_retrigger_system);
+        builder.add_system(Stage::Logic, systems::build_ui_button_system);
 
         Ok(())
     }

@@ -55,6 +55,9 @@ where T: BindingTypes
         builder.add_system(Stage::Logic, systems::build_ui_button_action_retrigger_system);
         builder.add_system(Stage::Logic, systems::build_ui_button_system);
 
+        // Removed; requires `Output` resource
+        // builder.add_system(Stage::Logic, systems::build_ui_sound_system);
+
         Ok(())
     }
 }

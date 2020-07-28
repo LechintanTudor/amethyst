@@ -14,6 +14,7 @@ pub use self::{
     layout::{Anchor, ScaleMode, Stretch},
     pass::RenderUi,
     selection::{Selected},
+    sound::*,
     text::{LineMode, UiText, TextEditing},
     transform::UiTransform,
     widget::*,
@@ -34,6 +35,7 @@ mod pass;
 mod selection;
 mod selection_order_cache;
 mod sorted;
+mod sound;
 mod systems;
 mod text;
 mod text_editing;

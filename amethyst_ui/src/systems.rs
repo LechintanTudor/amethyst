@@ -10,5 +10,6 @@ pub use crate::{
     glyphs::build_ui_glyphs_system,
     layout::build_ui_transform_system,
     sorted::build_ui_sorting_system,
+    sound::build_ui_sound_system,
     text_editing::build_text_editing_input_system,
 };

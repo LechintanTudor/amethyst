@@ -1,5 +1,5 @@
 use crate::{
-    LineMode, Selected, TextEditing, UiEvent, UiEventType, UiText,
+    LineMode, SelectedEntities, TextEditing, UiEvent, UiEventType, UiText,
 };
 use amethyst_core::{
     ecs::prelude::*,
@@ -24,7 +24,7 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
 
     SystemBuilder::<()>::new("TextEditingInputSystem")
         .read_resource::<EventChannel<Event>>()
-        .read_resource::<Selected>()
+        .read_resource::<SelectedEntities>()
         .write_resource::<EventChannel<UiEvent>>()
         .write_component::<UiText>()
         .write_component::<TextEditing>()
@@ -32,7 +32,7 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
             let (winit_events, selected, ui_events) = resources;
 
             for event in winit_events.read(&mut winit_reader_id) {
-                if let Some(entity) = selected.entity {
+                if let Some(entity) = selected.last_entity() {
                     // Safe because system locks `UiText`
                     let mut ui_text = unsafe {
                         match world.get_component_mut_unchecked::<UiText>(entity) {

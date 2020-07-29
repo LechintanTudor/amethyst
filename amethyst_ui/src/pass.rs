@@ -1,5 +1,5 @@
 use crate::{
-    Selected, TextEditing, UiImage, UiTransform,
+    SelectedEntities, TextEditing, UiImage, UiTransform,
     glyphs::{UiGlyphs, UiGlyphsResource},
     sorted::SortedWidgets,
     systems,
@@ -257,7 +257,7 @@ where B: Backend
 
         // Batches
         self.batches.swap_clear();
-        let selected = aux.resources.get::<Selected>().map(|s| s.entity).flatten();
+        let selected = aux.resources.get::<SelectedEntities>().map(|s| s.last_entity()).flatten();
 
         for &(entity, _) in aux.resources.get::<SortedWidgets>().unwrap().widgets() {
             let transform = aux.world.get_component::<UiTransform>(entity).unwrap();

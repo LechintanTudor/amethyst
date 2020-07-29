@@ -1,7 +1,8 @@
 use crate::{
     FontAsset, UiEvent,
     glyphs::UiGlyphsResource,
-    selection::Selected,
+    selection::*,
+    selection_order_cache::SelectionOrderCache,
     sorted::SortedWidgets,
     systems,
 };
@@ -16,14 +17,18 @@ use amethyst_input::{BindingTypes, InputEvent, InputHandler};
 use std::marker::PhantomData;
 
 #[derive(Default, Debug)]
-pub struct UiBundle<T>
-where T: BindingTypes
+pub struct UiBundle<T, G = ()>
+where
+    T: BindingTypes,
+    G: Send + Sync + PartialEq + 'static,
 {
-    _phantom: PhantomData<T>
+    _phantom: PhantomData<(T, G)>
 }
 
-impl<T> UiBundle<T>
-where T: BindingTypes
+impl<T, G> UiBundle<T, G>
+where
+    T: BindingTypes,
+    G: Send + Sync + PartialEq + 'static,
 {
     pub fn new() -> Self {
         Self {
@@ -32,15 +37,18 @@ where T: BindingTypes
     }
 }
 
-impl<T> SystemBundle for UiBundle<T>
-where T: BindingTypes
+impl<T, G> SystemBundle for UiBundle<T, G>
+where
+    T: BindingTypes,
+    G: Send + Sync + PartialEq + 'static,
 {
     fn build(self, world: &mut World, resources: &mut Resources, builder: &mut DispatcherBuilder<'_>) -> Result<(), Error> {
         resources.insert(AssetStorage::<FontAsset>::new());
         resources.insert(UiGlyphsResource::default());
         resources.insert(EventChannel::<UiEvent>::new());
         resources.insert(SortedWidgets::new());
-        resources.insert(Selected::default());
+        resources.insert(SelectedEntities::default());
+        resources.insert(SelectionOrderCache::default());
 
         // TODO: Remove; should be handled by `amethyst_input`
         resources.insert(InputHandler::<T>::new());
@@ -54,6 +62,8 @@ where T: BindingTypes
         builder.add_system(Stage::Logic, systems::build_text_editing_input_system);
         builder.add_system(Stage::Logic, systems::build_ui_button_action_retrigger_system);
         builder.add_system(Stage::Logic, systems::build_ui_button_system);
+        builder.add_system(Stage::Logic, systems::build_selection_order_cache_system::<G>);
+        builder.add_system(Stage::Logic, systems::build_mouse_selection_system::<T, G>);
 
         // Removed; requires `Output` resource
         // builder.add_system(Stage::Logic, systems::build_ui_sound_system);

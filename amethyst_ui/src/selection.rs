@@ -7,9 +7,6 @@ use amethyst_input::{BindingTypes, InputHandler};
 use std::collections::HashSet;
 use winit::VirtualKeyCode;
 
-#[derive(Copy, Clone, Default, Debug)]
-pub struct Selected;
-
 #[derive(Clone, Default, Debug)]
 pub struct SelectedEntities {
     entities: HashSet<Entity>,
@@ -25,6 +22,10 @@ impl SelectedEntities {
     pub fn insert(&mut self, entity: Entity) {
         self.entities.insert(entity);
         self.last_entity = Some(entity);
+    }
+
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.entities.contains(&entity)
     }
 
     pub fn entities(&self) -> &HashSet<Entity> {

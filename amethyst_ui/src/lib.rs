@@ -13,6 +13,7 @@ pub use self::{
     image::UiImage,
     layout::{Anchor, ScaleMode, Stretch},
     pass::RenderUi,
+    prefab::*,
     selection::*,
     selection_order_cache::*,
     sorted::*,
@@ -34,6 +35,7 @@ mod glyphs;
 mod image;
 mod layout;
 mod pass;
+mod prefab;
 mod selection;
 mod selection_order_cache;
 mod sorted;

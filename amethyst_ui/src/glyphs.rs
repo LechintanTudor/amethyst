@@ -491,7 +491,7 @@ where B: Backend
                                     *v
                                 });
 
-                            if let Some(mut glyph_data) = glyphs.as_mut() {
+                            if let Some(glyph_data) = glyphs.as_mut() {
                                 glyph_data.vertices.extend(vertices);
                             } else {
                                 commands.add_component(entity, UiGlyphs {
@@ -531,13 +531,13 @@ where B: Backend
                                         color_bias: [0.0, 0.0, 0.0, 0.0].into(),
                                     });
 
-                                if let Some(mut glyph_data) = glyphs {
-                                    glyph_data.selection_vertices.extend(selection_ui_args_iter);
-                                    glyph_data.height = height;
-                                    glyph_data.space_width = scaled_font.h_advance(scaled_font.glyph_id(' '));
+                                if let Some(mut glyphs) = glyphs {
+                                    glyphs.selection_vertices.extend(selection_ui_args_iter);
+                                    glyphs.height = height;
+                                    glyphs.space_width = scaled_font.h_advance(scaled_font.glyph_id(' '));
 
                                     update_cursor_position(
-                                        &mut glyph_data,
+                                        &mut glyphs,
                                         &ui_text,
                                         &transform,
                                         text_editing.cursor_position as usize,
@@ -557,7 +557,12 @@ where B: Backend
                                     .expect("Font with rendered glyphs must be loaded");
                                 let scale = PxScale::from(ui_text.font_size);
                                 let scaled_font = font.0.as_scaled(scale);
+
+                                let height = scaled_font.ascent() - scaled_font.descent();
                                 let offset = (scaled_font.ascent() + scaled_font.descent()) / 2.0;
+
+                                glyphs.height = height;
+                                glyphs.space_width = scaled_font.h_advance(scaled_font.glyph_id(' '));
 
                                 update_cursor_position(
                                     &mut glyphs,
@@ -568,6 +573,7 @@ where B: Backend
                                 );
                             }
                         }
+
                         break;
                     }
                     Err(BrushError::TextureTooSmall { suggested: (width, height) }) => {

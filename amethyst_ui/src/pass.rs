@@ -74,13 +74,14 @@ impl RenderUi {
 }
 
 impl<B> RenderPlugin<B> for RenderUi
-where B: Backend
+where
+    B: Backend
 {
     fn on_build(
         &mut self,
         _world: &mut World,
         _resources: &mut Resources,
-        builder: &mut DispatcherBuilder<'_>
+        builder: &mut DispatcherBuilder<'_>,
     ) -> Result<(), Error>
     {
         builder.add_system(Stage::Render, systems::build_ui_glyphs_system::<B>);
@@ -90,9 +91,9 @@ where B: Backend
     fn on_plan(
         &mut self,
         plan: &mut RenderPlan<B>,
-        factory: &mut Factory<B>,
-        world: &World,
-        resources: &Resources
+        _factory: &mut Factory<B>,
+        _world: &World,
+        _resources: &Resources
     ) -> Result<(), Error>
     {
         plan.extend_target(self.target, |ctx| {
@@ -103,7 +104,7 @@ where B: Backend
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct DrawUiDesc;
 
 impl DrawUiDesc {
@@ -113,7 +114,8 @@ impl DrawUiDesc {
 }
 
 impl<B> RenderGroupDesc<B, GraphAuxData> for DrawUiDesc
-where B: Backend
+where
+    B: Backend
 {
     fn build<'a>(
         self,
@@ -199,7 +201,8 @@ struct UiViewArgs {
 
 #[derive(Debug)]
 pub struct DrawUi<B>
-where B: Backend
+where
+    B: Backend
 {
     pipeline: B::GraphicsPipeline,
     pipeline_layout: B::PipelineLayout,
@@ -212,7 +215,8 @@ where B: Backend
 }
 
 impl<B> RenderGroup<B, GraphAuxData> for DrawUi<B>
-where B: Backend
+where
+    B: Backend
 {
     fn prepare(
         &mut self,
@@ -220,9 +224,12 @@ where B: Backend
         queue: QueueId,
         index: usize,
         subpass: hal::pass::Subpass<'_, B>,
-        aux: &GraphAuxData
+        aux: &GraphAuxData,
     ) -> PrepareResult
     {
+        #[cfg(feature = "profiler")]
+        profile_scope!("prepare");
+
         let mut changed = false;
         let glyph_texture = aux.resources.get::<UiGlyphsResource>()
             .unwrap()
@@ -264,7 +271,7 @@ where B: Backend
             let tint = aux.world.get_component::<Tint>(entity).map(|t| t.as_ref().clone());
 
             if let Some(image) = aux.world.get_component::<UiImage>(entity) {
-                let image_changed = render_image(
+                changed |= render_image(
                     factory,
                     &transform,
                     &image,
@@ -333,26 +340,30 @@ where B: Backend
         }
 
         self.textures.maintain(factory, aux.resources);
+        changed |= self.batches.changed();
 
-        self.vertex.write(
-            factory,
-            index,
-            self.batches.count() as u64,
-            Some(self.batches.data()),
-        );
+        {
+            #[cfg(feature = "profiler")]
+            profile_scope!("write");
 
-        // View args
-        let screen_dimensions = aux.resources.get::<ScreenDimensions>().unwrap();
+            changed |= self.vertex.write(
+                factory,
+                index,
+                self.batches.count() as u64,
+                Some(self.batches.data()),
+            );
 
-        let view_args = UiViewArgs {
-            inverse_window_half_size: [
-                1.0 / (screen_dimensions.width() as f32 / 2.0),
-                1.0 / (screen_dimensions.height() as f32 / 2.0),
-            ].into(),
-        };
+            let screen_dimensions = aux.resources.get::<ScreenDimensions>().unwrap();
 
-        let env_changed = self.env.write(factory, index, view_args.std140());
-        changed = changed || env_changed;
+            let view_args = UiViewArgs {
+                inverse_window_half_size: [
+                    1.0 / (screen_dimensions.width() as f32 / 2.0),
+                    1.0 / (screen_dimensions.height() as f32 / 2.0),
+                ].into(),
+            };
+
+            changed |= self.env.write(factory, index, view_args.std140());
+        }
 
         self.change.prepare_result(index, changed)
     }
@@ -362,8 +373,12 @@ where B: Backend
         mut encoder: RenderPassEncoder<'_, B>,
         index: usize, subpass:
         hal::pass::Subpass<'_, B>,
-        aux: &GraphAuxData)
+        aux: &GraphAuxData,
+    )
     {
+        #[cfg(feature = "profiler")]
+        profile_scope!("draw");
+
         if self.batches.count() > 0 {
             encoder.bind_graphics_pipeline(&self.pipeline);
             self.env.bind(index, &self.pipeline_layout, 0, &mut encoder);
@@ -393,7 +408,8 @@ fn build_ui_pipeline<B>(
     framebuffer_height: u32,
     layouts: Vec<&B::DescriptorSetLayout>,
 ) -> Result<(B::GraphicsPipeline, B::PipelineLayout), failure::Error>
-where B: Backend
+where
+    B: Backend
 {
     let pipeline_layout = unsafe {
         factory
@@ -446,7 +462,8 @@ fn render_image<B>(
     batches: &mut OrderedOneLevelBatch<TextureId, UiArgs>,
     resources: &Resources,
 ) -> bool
-where B: Backend
+where
+    B: Backend
 {
     let color = utils::mul_blend_lin_rgba_arrays(image_color(image), tint_color(tint));
 

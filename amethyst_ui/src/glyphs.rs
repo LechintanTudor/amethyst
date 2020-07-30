@@ -31,6 +31,7 @@ use glyph_brush::{
 use std::{
     collections::HashMap,
     cmp,
+    iter,
     mem,
     ops::Range,
 };
@@ -239,8 +240,49 @@ where B: Backend
                                 },
                             ]
                         }
+                    },
+                    (true, None) => {
+                        let grapheme_count = ui_text.text.graphemes(true).count();
+
+                        password_sections(grapheme_count)
+                            .map(|text| Text {
+                                text,
+                                scale,
+                                font_id,
+                                extra: ExtraTextData::new(entity, base_color),
+                            })
+                            .collect()
+                    },
+                    (true, Some(text_editing)) => {
+                        let grapheme_count = ui_text.text.graphemes(true).count();
+                        let cursor_position = text_editing.cursor_position;
+                        let highlight_position = text_editing.cursor_position + text_editing.highlight_vector;
+                        let start = cursor_position.min(highlight_position) as usize;
+                        let to_end = cursor_position.max(highlight_position) as usize - start;
+                        let rest = grapheme_count - to_end - start;
+
+                        let selected_color = utils::mul_blend_lin_rgba_arrays(
+                            utils::srgba_to_lin_rgba_array(text_editing.selected_text_color),
+                            tint_color,
+                        );
+
+                        [
+                            (start, base_color),
+                            (to_end, selected_color),
+                            (rest, base_color),
+                        ]
+                        .iter()
+                        .flat_map(|&(grapheme_count, color)| {
+                            password_sections(grapheme_count)
+                                .map(move |text| Text {
+                                    text,
+                                    scale,
+                                    font_id,
+                                    extra: ExtraTextData::new(entity, color),
+                                })
+                        })
+                        .collect()
                     }
-                    _ => todo!()
                 };
 
                 let layout = match ui_text.line_mode {
@@ -273,51 +315,64 @@ where B: Backend
                 let mut visible_glyphs_iter = glyph_brush
                     .glyphs_custom_layout(&section, &layout);
 
-                let mut last_cached_glyph = Option::<CachedGlyph>::None;
-                let mut last_section_glyph = visible_glyphs_iter.next();
+                if ui_text.password {
+                    let all_glyphs_iter = visible_glyphs_iter.map(|section_glyph| {
+                        CachedGlyph {
+                            x: section_glyph.glyph.position.x,
+                            y: -section_glyph.glyph.position.y,
+                            advance_width: scaled_font.h_advance(section_glyph.glyph.id),
+                        }
+                    });
 
-                let all_glyphs_iter = ui_text.text.chars().map(|c| {
-                    let (x, y) = match last_cached_glyph {
-                        Some(last_cached_glyph) => (
-                            last_cached_glyph.x + last_cached_glyph.advance_width,
-                            last_cached_glyph.y,
-                        ),
-                        None => (0.0, 0.0),
-                    };
+                    cached_glyphs.extend(all_glyphs_iter);
+                } else {
+                    let mut last_section_glyph = visible_glyphs_iter.next();
+                    let mut last_cached_glyph = Option::<CachedGlyph>::None;
 
-                    let cached_glyph = match last_section_glyph {
-                        Some(section_glyph) => {
-                            if scaled_font.glyph_id(c) == section_glyph.glyph.id {
-                                let cached_glyph = CachedGlyph {
-                                    x: section_glyph.glyph.position.x,
-                                    y: -section_glyph.glyph.position.y,
-                                    advance_width: scaled_font.h_advance(section_glyph.glyph.id),
-                                };
+                    let all_glyphs_iter = ui_text.text.chars().map(|c| {
+                        let (x, y) = match last_cached_glyph {
+                            Some(last_cached_glyph) => (
+                                last_cached_glyph.x + last_cached_glyph.advance_width,
+                                last_cached_glyph.y,
+                            ),
+                            None => (0.0, 0.0),
+                        };
 
-                                last_section_glyph = visible_glyphs_iter.next();
-                                cached_glyph
-                            } else {
+                        let cached_glyph = match last_section_glyph {
+                            Some(section_glyph) => {
+                                if scaled_font.glyph_id(c) == section_glyph.glyph.id {
+                                    let cached_glyph = CachedGlyph {
+                                        x: section_glyph.glyph.position.x,
+                                        y: -section_glyph.glyph.position.y,
+                                        advance_width: scaled_font.h_advance(section_glyph.glyph.id),
+                                    };
+
+                                    last_section_glyph = visible_glyphs_iter.next();
+                                    cached_glyph
+                                } else {
+                                    CachedGlyph {
+                                        x,
+                                        y,
+                                        advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
+                                    }
+                                }
+                            }
+                            None => {
                                 CachedGlyph {
                                     x,
                                     y,
                                     advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
                                 }
                             }
-                        }
-                        None => {
-                            CachedGlyph {
-                                x,
-                                y,
-                                advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
-                            }
-                        }
-                    };
+                        };
 
-                    last_cached_glyph = Some(cached_glyph);
-                    cached_glyph
-                });
+                        last_cached_glyph = Some(cached_glyph);
+                        cached_glyph
+                    });
 
-                cached_glyphs.extend(all_glyphs_iter);
+                    cached_glyphs.extend(all_glyphs_iter);
+                }
+
                 glyph_brush.queue_custom_layout(section, &layout);
                 mem::swap(&mut ui_text.cached_glyphs, &mut cached_glyphs);
             }
@@ -624,4 +679,17 @@ fn highlighted_glyphs_range(text_editing: &TextEditing, ui_text: &UiText) -> Ran
     let end = cursor_position.max(highlight_position).min(glyph_count);
 
     start..end
+}
+
+fn password_sections(grapheme_count: usize) -> impl Iterator<Item = &'static str> {
+    const PASSWORD_STR: &'static str = "••••••••••••••••";
+    const PASSWORD_STR_GRAPHEME_COUNT: usize = 16;
+    const PASSWORD_CHAR_GRAPHEME_BYTE_COUNT: usize = 3;
+
+    let full_chunks = grapheme_count / PASSWORD_STR_GRAPHEME_COUNT;
+    let remaining_graphemes = grapheme_count % PASSWORD_STR_GRAPHEME_COUNT;
+
+    iter::repeat(PASSWORD_STR)
+        .take(full_chunks)
+        .chain(Some(&PASSWORD_STR[0..remaining_graphemes * PASSWORD_CHAR_GRAPHEME_BYTE_COUNT]))
 }

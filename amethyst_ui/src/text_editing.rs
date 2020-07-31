@@ -5,6 +5,8 @@ use amethyst_core::{
     ecs::prelude::*,
     shrev::EventChannel,
 };
+use clipboard::{ClipboardContext, ClipboardProvider};
+use log::error;
 use std::{
     cmp,
     ops::Range,
@@ -21,6 +23,9 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
         .get_mut::<EventChannel<Event>>()
         .expect("`EventChannel<Event>` was not found in resources")
         .register_reader();
+
+    let mut clipboard = ClipboardContext::new()
+        .expect("Failed to create clipboard context");
 
     SystemBuilder::<()>::new("TextEditingInputSystem")
         .read_resource::<EventChannel<Event>>()
@@ -246,6 +251,74 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                                     }
                                 }
                             }
+                            VirtualKeyCode::A => if ctrl_or_cmd(modifiers) {
+                                let grapheme_count = ui_text.text.graphemes(true).count() as isize;
+                                text_editing.cursor_position = grapheme_count;
+                                text_editing.highlight_vector = -grapheme_count;
+                            }
+                            VirtualKeyCode::X => if ctrl_or_cmd(modifiers) {
+                                let cut_text = extract_highlighted(&mut text_editing, &mut ui_text);
+
+                                if !cut_text.is_empty() {
+                                    match clipboard.set_contents(cut_text) {
+                                        Ok(_) => {
+                                            ui_events.single_write(UiEvent::new(
+                                                UiEventType::ValueChange,
+                                                entity,
+                                            ));
+                                        }
+                                        Err(e) => {
+                                            error!("Error occured when cutting to clipboard: {:?}", e);
+                                        }
+                                    }
+                                }
+                            }
+                            VirtualKeyCode::C => if ctrl_or_cmd(modifiers) {
+                                let copied_text = read_highlighted(&text_editing, &ui_text);
+
+                                if !copied_text.is_empty() {
+                                    match clipboard.set_contents(copied_text.to_string()) {
+                                        Ok(_) => {
+                                            ui_events.single_write(UiEvent::new(
+                                                UiEventType::ValueChange,
+                                                entity,
+                                            ));
+                                        }
+                                        Err(e) => {
+                                            error!("Error occured when copying to clipboard: {:?}", e);
+                                        }
+                                    }
+                                }
+                            }
+                            VirtualKeyCode::V => if ctrl_or_cmd(modifiers) {
+                                delete_highlighted(&mut text_editing, &mut ui_text);
+
+                                match clipboard.get_contents() {
+                                    Ok(clipboard_text) => {
+                                        let index = cursor_byte_index(&text_editing, &ui_text);
+
+                                        let available_graphemes = (text_editing.max_length as usize
+                                            - ui_text.text.graphemes(true).count()).min(clipboard_text.len());
+
+                                        let available_bytes = clipboard_text
+                                            .grapheme_indices(true)
+                                            .nth(available_graphemes)
+                                            .map(|(i, _)| i)
+                                            .unwrap_or(clipboard_text.len());
+
+                                        ui_text.text.insert_str(index, &clipboard_text[0..available_bytes]);
+                                        text_editing.cursor_position += available_graphemes as isize;
+
+                                        ui_events.single_write(UiEvent::new(
+                                            UiEventType::ValueChange,
+                                            entity,
+                                        ));
+                                    }
+                                    Err(e) => {
+                                        error!("Error occured when pasting contents of clipboard: {:?}", e);
+                                    }
+                                }
+                            }
                             _ => (),
                         }
                         _ => (),
@@ -266,8 +339,13 @@ fn should_skip_char(input: char) -> bool {
 fn delete_highlighted(text_editing: &mut TextEditing, ui_text: &mut UiText) -> bool {
     if text_editing.highlight_vector != 0 {
         let range = highlighted_bytes(text_editing, ui_text);
-        text_editing.cursor_position = range.start as isize;
+
+        text_editing.cursor_position = cmp::min(
+            text_editing.cursor_position,
+            text_editing.cursor_position + text_editing.highlight_vector,
+        );
         text_editing.highlight_vector = 0;
+
         ui_text.text.drain(range);
         true
     } else {
@@ -317,4 +395,17 @@ fn cursor_byte_index(text_editing: &TextEditing, ui_text: &UiText) -> usize {
         .nth(text_editing.cursor_position as usize)
         .map(|(i, _)| i)
         .unwrap_or_else(|| ui_text.text.len())
+}
+
+fn extract_highlighted(text_editing: &mut TextEditing, ui_text: &mut UiText) -> String {
+    let highlighted_range = highlighted_bytes(text_editing, ui_text);
+    text_editing.cursor_position = highlighted_range.start as isize;
+    text_editing.highlight_vector = 0;
+
+    ui_text.text.drain(highlighted_range).collect()
+}
+
+fn read_highlighted<'a>(text_editing: &TextEditing, ui_text: &'a UiText) -> &'a str {
+    let highlighted_range = highlighted_bytes(text_editing, ui_text);
+    &ui_text.text[highlighted_range]
 }

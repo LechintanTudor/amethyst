@@ -18,7 +18,8 @@ pub use self::{
     selection_order_cache::*,
     sorted::*,
     sound::*,
-    text::{LineMode, UiText, TextEditing},
+    text::*,
+    text_editing::*,
     transform::UiTransform,
     widget::*,
 };

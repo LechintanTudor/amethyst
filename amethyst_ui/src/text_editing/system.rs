@@ -1,5 +1,6 @@
 use crate::{
     LineMode, SelectedEntities, TextEditing, UiEvent, UiEventType, UiText,
+    text_editing::*,
 };
 use amethyst_core::{
     ecs::prelude::*,
@@ -61,7 +62,7 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                             }
 
                             text_editing.cursor_blink_timer = 0.0;
-                            delete_highlighted(&mut text_editing, &mut ui_text);
+                            delete_highlighted_text(&mut text_editing, &mut ui_text);
 
                             let start_byte = ui_text
                                 .text
@@ -110,7 +111,7 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                                 text_editing.cursor_blink_timer = 0.0;
                             }
                             VirtualKeyCode::Back => {
-                                if !delete_highlighted(&mut text_editing, &mut ui_text)
+                                if !delete_highlighted_text(&mut text_editing, &mut ui_text)
                                     && text_editing.cursor_position > 0
                                 {
                                     if let Some((byte, len)) = ui_text
@@ -125,7 +126,7 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                                 }
                             },
                             VirtualKeyCode::Delete => {
-                                if !delete_highlighted(&mut text_editing, &mut ui_text) {
+                                if !delete_highlighted_text(&mut text_editing, &mut ui_text) {
                                     if let Some((byte, len)) = ui_text
                                         .text
                                         .grapheme_indices(true)
@@ -257,7 +258,7 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                                 text_editing.highlight_vector = -grapheme_count;
                             }
                             VirtualKeyCode::X => if ctrl_or_cmd(modifiers) {
-                                let cut_text = extract_highlighted(&mut text_editing, &mut ui_text);
+                                let cut_text = extract_highlighted_text(&mut text_editing, &mut ui_text);
 
                                 if !cut_text.is_empty() {
                                     match clipboard.set_contents(cut_text) {
@@ -274,7 +275,7 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                                 }
                             }
                             VirtualKeyCode::C => if ctrl_or_cmd(modifiers) {
-                                let copied_text = read_highlighted(&text_editing, &ui_text);
+                                let copied_text = highlighted_text(&text_editing, &ui_text);
 
                                 if !copied_text.is_empty() {
                                     match clipboard.set_contents(copied_text.to_string()) {
@@ -291,7 +292,7 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
                                 }
                             }
                             VirtualKeyCode::V => if ctrl_or_cmd(modifiers) {
-                                delete_highlighted(&mut text_editing, &mut ui_text);
+                                delete_highlighted_text(&mut text_editing, &mut ui_text);
 
                                 match clipboard.get_contents() {
                                     Ok(clipboard_text) => {
@@ -336,76 +337,10 @@ fn should_skip_char(input: char) -> bool {
     (input >= '\u{100000}' && input <= '\u{10FFFF}')
 }
 
-fn delete_highlighted(text_editing: &mut TextEditing, ui_text: &mut UiText) -> bool {
-    if text_editing.highlight_vector != 0 {
-        let range = highlighted_bytes(text_editing, ui_text);
-
-        text_editing.cursor_position = cmp::min(
-            text_editing.cursor_position,
-            text_editing.cursor_position + text_editing.highlight_vector,
-        );
-        text_editing.highlight_vector = 0;
-
-        ui_text.text.drain(range);
-        true
-    } else {
-        false
-    }
-}
-
-fn highlighted_bytes(text_editing: &TextEditing, ui_text: &UiText) -> Range<usize> {
-    let start = cmp::min(
-        text_editing.cursor_position,
-        text_editing.cursor_position + text_editing.highlight_vector,
-    ) as usize;
-
-    let end = cmp::max(
-        text_editing.cursor_position,
-        text_editing.cursor_position + text_editing.highlight_vector,
-    ) as usize;
-
-    let start_byte = ui_text
-        .text
-        .grapheme_indices(true)
-        .nth(start)
-        .map(|(i, _)| i)
-        .unwrap_or_else(|| ui_text.text.len());
-
-    let end_byte = ui_text
-        .text.grapheme_indices(true)
-        .nth(end)
-        .map(|(i, _)| i)
-        .unwrap_or_else(|| ui_text.text.len());
-
-    start_byte..end_byte
-}
-
 fn ctrl_or_cmd(modifiers: ModifiersState) -> bool {
     if cfg!(target_os = "macos") {
         modifiers.logo
     } else {
         modifiers.ctrl
     }
-}
-
-fn cursor_byte_index(text_editing: &TextEditing, ui_text: &UiText) -> usize {
-    ui_text
-        .text
-        .grapheme_indices(true)
-        .nth(text_editing.cursor_position as usize)
-        .map(|(i, _)| i)
-        .unwrap_or_else(|| ui_text.text.len())
-}
-
-fn extract_highlighted(text_editing: &mut TextEditing, ui_text: &mut UiText) -> String {
-    let highlighted_range = highlighted_bytes(text_editing, ui_text);
-    text_editing.cursor_position = highlighted_range.start as isize;
-    text_editing.highlight_vector = 0;
-
-    ui_text.text.drain(highlighted_range).collect()
-}
-
-fn read_highlighted<'a>(text_editing: &TextEditing, ui_text: &'a UiText) -> &'a str {
-    let highlighted_range = highlighted_bytes(text_editing, ui_text);
-    &ui_text.text[highlighted_range]
 }

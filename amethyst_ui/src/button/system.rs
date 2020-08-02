@@ -57,7 +57,7 @@ where
     }
 }
 
-pub fn build_ui_button_system(world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable> {
+pub fn build_ui_button_system(_world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable> {
     let mut action_reader = resources
         .get_mut_or_default::<EventChannel<UiButtonAction>>()
         .unwrap()

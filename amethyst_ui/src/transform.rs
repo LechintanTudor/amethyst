@@ -106,10 +106,11 @@ pub fn get_parent_pixel_size<E>(
     world: &E,
     screen_dimensions: &ScreenDimensions,
 ) -> (f32, f32)
-where E: EntityStore
+where
+    E: EntityStore
 {
-    if let Some(Parent(parent)) = world.get_component::<Parent>(entity).map(|p| *p) {
-        if let Some(transform) = world.get_component::<UiTransform>(entity) {
+    if let Some(parent) = world.get_component::<Parent>(entity) {
+        if let Some(transform) = world.get_component::<UiTransform>(parent.0) {
             return (
                 transform.pixel_width,
                 transform.pixel_height,

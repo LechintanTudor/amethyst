@@ -52,7 +52,7 @@ pub fn build_ui_sound_system(_: &mut World, resources: &mut Resources) -> Box<dy
         .read_resource::<Option<Output>>()
         .read_resource::<AssetStorage<Source>>()
         .write_resource::<EventChannel<UiPlaySoundAction>>()
-        .build(move |_, world, resources, _| {
+        .build(move |_, _, resources, _| {
             let (output, source_storage, play_sound_actions) = resources;
 
             for action in play_sound_actions.read(&mut play_sound_action_reader) {

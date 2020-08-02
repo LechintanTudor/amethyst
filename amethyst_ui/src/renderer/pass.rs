@@ -118,15 +118,15 @@ where
 {
     fn build<'a>(
         self,
-        ctx: &GraphContext<B>,
+        _ctx: &GraphContext<B>,
         factory: &mut Factory<B>,
-        queue: QueueId,
+        _queue: QueueId,
         aux: &GraphAuxData,
         framebuffer_width: u32,
         framebuffer_height: u32,
         subpass: hal::pass::Subpass<'_, B>,
-        buffers: Vec<NodeBuffer>,
-        images: Vec<NodeImage>
+        _buffers: Vec<NodeBuffer>,
+        _images: Vec<NodeImage>
     ) -> Result<Box<dyn RenderGroup<B, GraphAuxData>>, failure::Error>
     {
         #[cfg(feature = "profiler")]
@@ -220,9 +220,9 @@ where
     fn prepare(
         &mut self,
         factory: &Factory<B>,
-        queue: QueueId,
+        _queue: QueueId,
         index: usize,
-        subpass: hal::pass::Subpass<'_, B>,
+        _subpass: hal::pass::Subpass<'_, B>,
         aux: &GraphAuxData,
     ) -> PrepareResult
     {
@@ -370,9 +370,9 @@ where
     fn draw_inline(
         &mut self,
         mut encoder: RenderPassEncoder<'_, B>,
-        index: usize, subpass:
-        hal::pass::Subpass<'_, B>,
-        aux: &GraphAuxData,
+        index: usize,
+        _subpass: hal::pass::Subpass<'_, B>,
+        _aux: &GraphAuxData,
     )
     {
         #[cfg(feature = "profiler")]
@@ -392,7 +392,7 @@ where
         }
     }
 
-    fn dispose(self: Box<Self>, factory: &mut Factory<B>, aux: &GraphAuxData) {
+    fn dispose(self: Box<Self>, factory: &mut Factory<B>, _aux: &GraphAuxData) {
         unsafe {
             factory.device().destroy_graphics_pipeline(self.pipeline);
             factory.device().destroy_pipeline_layout(self.pipeline_layout);

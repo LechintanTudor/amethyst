@@ -48,7 +48,7 @@ where
     pub consumes_inputs: bool,
 }
 
-pub fn build_mouse_selection_system<T, G>(world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
+pub fn build_mouse_selection_system<T, G>(_world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
 where
     T: BindingTypes,
     G: Send + Sync + PartialEq + 'static,

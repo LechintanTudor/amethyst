@@ -105,7 +105,7 @@ impl LineBreaker for CustomLineBreaker {
     }
 }
 
-pub fn build_ui_glyphs_system<B>(world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
+pub fn build_ui_glyphs_system<B>(_world: &mut World, _resources: &mut Resources) -> Box<dyn Schedulable>
 where B: Backend
 {
     let mut glyph_brush: GlyphBrush<(Entity, UiArgs), ExtraTextData> =
@@ -131,7 +131,7 @@ where B: Backend
             )>::query()
                 .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
         )
-        .with_query(<(Write<UiGlyphs>,)>::query())
+        .with_query(Write::<UiGlyphs>::query())
         .with_query(
             <(
                 Read<UiTransform>,
@@ -142,10 +142,19 @@ where B: Backend
             )>::query()
                 .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
         )
+        .with_query(
+            <(
+                Read<UiTransform>,
+                Write<UiText>,
+                TryWrite<TextEditing>,
+                TryWrite<UiGlyphs>,
+            )>::query()
+                .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
+        )
         .write_component::<UiGlyphs>()
         .build(move |commands, world, resources, queries| {
             let (factory, queue, texture_storage, font_storage, glyphs_res) = resources;
-            let (text_query, glyph_query, glyph_query2) = queries;
+            let (text_query, glyph_clear_query, glyph_draw_query, glyph_redraw_query) = queries;
 
             let glyph_texture_handle = glyphs_res.glyph_texture.get_or_insert_with(|| {
                 let (width, height) = glyph_brush.texture_dimensions();
@@ -476,12 +485,12 @@ where B: Backend
                     Ok(BrushAction::Draw(vertices)) => {
                         let mut current_glyph = 0;
 
-                        for (mut glyph_data,) in glyph_query.iter_mut(world) {
-                            glyph_data.selection_vertices.clear();
-                            glyph_data.vertices.clear();
+                        for mut glyphs in glyph_clear_query.iter_mut(world) {
+                            glyphs.selection_vertices.clear();
+                            glyphs.vertices.clear();
                         }
 
-                        for (entity, (transform, ui_text, tint, text_editing, mut glyphs)) in glyph_query2.iter_entities_mut(world) {
+                        for (entity, (transform, ui_text, tint, text_editing, mut glyphs)) in glyph_draw_query.iter_entities_mut(world) {
                             let vertices = vertices[current_glyph..]
                                 .iter()
                                 .take_while(|(e, _)| *e == entity)
@@ -490,8 +499,8 @@ where B: Backend
                                     *v
                                 });
 
-                            if let Some(glyph_data) = glyphs.as_mut() {
-                                glyph_data.vertices.extend(vertices);
+                            if let Some(glyphs) = glyphs.as_mut() {
+                                glyphs.vertices.extend(vertices);
                             } else {
                                 commands.add_component(entity, UiGlyphs {
                                     vertices: vertices.collect(),
@@ -549,7 +558,7 @@ where B: Backend
                         break;
                     }
                     Ok(BrushAction::ReDraw) => {
-                        for (entity, (transform, ui_text, tint, text_editing, glyphs)) in glyph_query2.iter_entities_mut(world) {
+                        for (transform, ui_text, text_editing, glyphs) in glyph_redraw_query.iter_mut(world) {
                             if let (Some(text_editing), Some(mut glyphs)) = (text_editing, glyphs) {
                                 let font = font_storage
                                     .get(&ui_text.font)

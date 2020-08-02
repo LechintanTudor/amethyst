@@ -19,7 +19,7 @@ use std::collections::HashSet;
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct Draggable;
 
-pub fn build_drag_widget_system<T>(world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
+pub fn build_drag_widget_system<T>(_world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
 where T: BindingTypes
 {
     let mut ui_reader_id = resources

@@ -42,7 +42,7 @@ where
     T: BindingTypes,
     G: Send + Sync + PartialEq + 'static,
 {
-    fn build(self, world: &mut World, resources: &mut Resources, builder: &mut DispatcherBuilder<'_>) -> Result<(), Error> {
+    fn build(self, _world: &mut World, resources: &mut Resources, builder: &mut DispatcherBuilder<'_>) -> Result<(), Error> {
         resources.insert(AssetStorage::<FontAsset>::new());
         resources.insert(UiGlyphsResource::default());
         resources.insert(EventChannel::<UiEvent>::new());

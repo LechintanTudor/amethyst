@@ -1,8 +1,10 @@
 use crate::{
     FontAsset, LineMode, TextEditing, UiText, UiTransform,
-    renderer::UiArgs,
+    renderer::{
+        UiArgs,
+        utils,
+    },
     text::CachedGlyph,
-    utils,
 };
 use amethyst_assets::{AssetStorage, Handle};
 use amethyst_core::{

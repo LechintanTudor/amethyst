@@ -3,7 +3,6 @@ use crate::{
     event,
     sorted::SortedWidgets,
     transform,
-    utils,
 };
 use amethyst_core::{
     Hidden, HiddenPropagate,
@@ -45,7 +44,7 @@ where T: BindingTypes
         .build(move |_, world, resources, _| {
             let (input, screen_dimensions, sorted_widgets, ui_events) = resources;
             let mouse_position = input.mouse_position().unwrap_or((0.0, 0.0));
-            let mouse_position = utils::world_position(mouse_position, &screen_dimensions);
+            let mouse_position = event::mouse_world_position(mouse_position, &screen_dimensions);
             let mouse_position = Vector2::new(mouse_position.0, mouse_position.1);
 
             drag_stop_targets.clear();

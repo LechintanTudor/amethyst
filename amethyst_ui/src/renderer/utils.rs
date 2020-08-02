@@ -15,14 +15,3 @@ pub fn mul_blend_srgba_to_lin_rgba_array(a: &Srgba, b: &Srgba) -> [f32; 4] {
     let (r2, g2, b2, a2) = b.into_linear().into_components();
     [r1 * r2, g1 * g2, b1 * b2, a1 * a2]
 }
-
-pub fn world_position(
-    (mouse_x, mouse_y): (f32, f32),
-    screen_dimensions: &ScreenDimensions
-) -> (f32, f32)
-{
-    (
-        mouse_x - screen_dimensions.width() / 2.0,
-        screen_dimensions.height() - mouse_y - screen_dimensions.height() / 2.0,
-    )
-}

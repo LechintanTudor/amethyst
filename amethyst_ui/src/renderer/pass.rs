@@ -1,9 +1,11 @@
 use crate::{
     SelectedEntities, TextEditing, UiImage, UiTransform,
-    renderer::{UiGlyphs, UiGlyphsResource},
+    renderer::{
+        UiGlyphs, UiGlyphsResource,
+        utils,
+    },
     sorted::SortedWidgets,
     systems,
-    utils,
 };
 use amethyst_assets::{AssetStorage, Handle, Loader};
 use amethyst_core::{

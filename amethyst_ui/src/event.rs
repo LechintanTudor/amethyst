@@ -76,7 +76,7 @@ where T: BindingTypes
             let click_stopped = !mouse_down && mouse_was_down;
 
             if let Some(mouse_position) = input.mouse_position() {
-                let mouse_position = utils::world_position(mouse_position, &screen_dimensions);
+                let mouse_position = mouse_world_position(mouse_position, &screen_dimensions);
 
                 let targets = get_targeted(mouse_position, &sorted_widgets, world);
 
@@ -162,4 +162,15 @@ where E: EntityStore
     }
 
     None
+}
+
+pub fn mouse_world_position(
+    (mouse_x, mouse_y): (f32, f32),
+    screen_dimensions: &ScreenDimensions
+) -> (f32, f32)
+{
+    (
+        mouse_x - screen_dimensions.width() / 2.0,
+        screen_dimensions.height() - mouse_y - screen_dimensions.height() / 2.0,
+    )
 }

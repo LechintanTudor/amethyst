@@ -5,3 +5,4 @@ pub use self::{
 
 mod glyphs;
 mod pass;
+pub(crate) mod utils;

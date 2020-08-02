@@ -10,25 +10,25 @@ use winit::VirtualKeyCode;
 #[derive(Clone, Default, Debug)]
 pub struct SelectedEntities {
     entities: HashSet<Entity>,
-    last_entity: Option<Entity>,
+    last: Option<Entity>,
 }
 
 impl SelectedEntities {
     pub fn clear(&mut self) {
         self.entities.clear();
-        self.last_entity = None;
+        self.last = None;
     }
 
     pub fn insert(&mut self, entity: Entity) {
         self.entities.insert(entity);
-        self.last_entity = Some(entity);
+        self.last = Some(entity);
     }
 
     pub fn remove(&mut self, entity: Entity) {
         self.entities.remove(&entity);
 
-        if matches!(self.last_entity, Some(entity)) {
-            self.last_entity = self.entities.iter().next().cloned();
+        if matches!(self.last, Some(entity)) {
+            self.last = self.entities.iter().next().cloned();
         }
     }
 
@@ -40,8 +40,8 @@ impl SelectedEntities {
         &self.entities
     }
 
-    pub fn last_entity(&self) -> Option<Entity> {
-        self.last_entity
+    pub fn last(&self) -> Option<Entity> {
+        self.last
     }
 }
 
@@ -94,7 +94,7 @@ where
                     };
 
                     let same_select_group = {
-                        if let Some(last_entity) = selected.last_entity() {
+                        if let Some(last_entity) = selected.last() {
                             if let Some(last_selectable) = world.get_component::<Selectable<G>>(last_entity) {
                                 last_selectable.multi_select_group == selectable.multi_select_group
                             } else {

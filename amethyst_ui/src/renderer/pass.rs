@@ -265,7 +265,7 @@ where
 
         // Batches
         self.batches.swap_clear();
-        let selected = aux.resources.get::<SelectedEntities>().map(|s| s.last_entity()).flatten();
+        let selected = aux.resources.get::<SelectedEntities>().map(|s| s.last()).flatten();
 
         for &(entity, _) in aux.resources.get::<SortedWidgets>().unwrap().widgets() {
             let transform = aux.world.get_component::<UiTransform>(entity).unwrap();

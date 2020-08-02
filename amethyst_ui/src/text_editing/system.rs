@@ -42,7 +42,7 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
             }
 
             for event in winit_events.read(&mut winit_reader_id) {
-                if let Some(entity) = selected.last_entity() {
+                if let Some(entity) = selected.last() {
                     // Safe because system locks `UiText`
                     let mut ui_text = unsafe {
                         match world.get_component_mut_unchecked::<UiText>(entity) {

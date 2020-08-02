@@ -24,6 +24,14 @@ impl SelectedEntities {
         self.last_entity = Some(entity);
     }
 
+    pub fn remove(&mut self, entity: Entity) {
+        self.entities.remove(&entity);
+
+        if matches!(self.last_entity, Some(entity)) {
+            self.last_entity = self.entities.iter().next().cloned();
+        }
+    }
+
     pub fn contains(&self, entity: Entity) -> bool {
         self.entities.contains(&entity)
     }

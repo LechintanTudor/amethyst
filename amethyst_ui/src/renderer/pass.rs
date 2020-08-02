@@ -1,6 +1,6 @@
 use crate::{
     SelectedEntities, TextEditing, UiImage, UiTransform,
-    glyphs::{UiGlyphs, UiGlyphsResource},
+    renderer::{UiGlyphs, UiGlyphsResource},
     sorted::SortedWidgets,
     systems,
     utils,
@@ -49,13 +49,13 @@ use thread_profiler::profile_scope;
 
 lazy_static::lazy_static! {
     static ref UI_VERTEX: SpirvShader = SpirvShader::from_bytes(
-        include_bytes!("../compiled/ui.vert.spv"),
+        include_bytes!("../../compiled/ui.vert.spv"),
         ShaderStageFlags::VERTEX,
         "main",
     ).unwrap();
 
     static ref UI_FRAGMENT: SpirvShader = SpirvShader::from_bytes(
-        include_bytes!("../compiled/ui.frag.spv"),
+        include_bytes!("../../compiled/ui.frag.spv"),
         ShaderStageFlags::FRAGMENT,
         "main",
     ).unwrap();

@@ -1,6 +1,6 @@
 use crate::{
     FontAsset, LineMode, TextEditing, UiText, UiTransform,
-    pass::UiArgs,
+    renderer::UiArgs,
     text::CachedGlyph,
     utils,
 };

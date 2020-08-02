@@ -12,8 +12,8 @@ pub use self::{
     format::{FontAsset, TtfFormat},
     image::UiImage,
     layout::{Anchor, ScaleMode, Stretch},
-    pass::RenderUi,
     prefab::*,
+    renderer::*,
     selection::*,
     selection_order_cache::*,
     sorted::*,
@@ -32,11 +32,10 @@ mod drag;
 mod event;
 mod event_retrigger;
 mod format;
-mod glyphs;
 mod image;
 mod layout;
-mod pass;
 mod prefab;
+mod renderer;
 mod selection;
 mod selection_order_cache;
 mod sorted;

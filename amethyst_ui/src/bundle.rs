@@ -1,6 +1,6 @@
 use crate::{
     FontAsset, UiEvent,
-    glyphs::UiGlyphsResource,
+    renderer::UiGlyphsResource,
     selection::*,
     selection_order_cache::SelectionOrderCache,
     sorted::SortedWidgets,

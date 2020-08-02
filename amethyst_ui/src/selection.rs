@@ -1,4 +1,4 @@
-use crate::{SortedWidgets, UiEvent, UiEventType};
+use crate::{UiEvent, UiEventType};
 use amethyst_core::{
     ecs::prelude::*,
     shrev::EventChannel,

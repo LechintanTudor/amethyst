@@ -7,7 +7,6 @@ use crate::{
 };
 use amethyst_assets::{AssetStorage, Handle, Loader};
 use amethyst_core::{
-    Hidden, HiddenPropagate,
     dispatcher::{DispatcherBuilder, Stage},
     ecs::prelude::*,
 };

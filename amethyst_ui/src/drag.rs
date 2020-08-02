@@ -9,15 +9,12 @@ use amethyst_core::{
     Hidden, HiddenPropagate,
     ecs::prelude::*,
     math::Vector2,
-    shrev::{EventChannel, ReaderId},
+    shrev::EventChannel,
 };
 use amethyst_input::{BindingTypes, InputHandler};
 use amethyst_window::ScreenDimensions;
 use serde::{Deserialize, Serialize};
-use std::{
-    any,
-    collections::HashSet,
-};
+use std::collections::HashSet;
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct Draggable;

@@ -3,7 +3,6 @@ use crate::{
 };
 use amethyst_assets::Handle;
 use amethyst_rendy::palette::Srgba;
-use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct CachedGlyph {

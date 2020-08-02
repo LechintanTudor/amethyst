@@ -211,7 +211,7 @@ impl UiButtonBuilder {
         );
 
         if let Some(parent) = self.parent {
-            target.add_component(entity, parent);
+            target.add_component(entity, Parent(parent));
         }
 
         target.add_component(entity, self.image);

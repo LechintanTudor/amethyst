@@ -11,7 +11,6 @@ use amethyst_core::{
 };
 use amethyst_rendy::{
     Texture,
-    palette::Srgba,
     rendy::{
         command::QueueId,
         factory::{Factory, ImageState},

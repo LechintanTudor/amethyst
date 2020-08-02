@@ -8,10 +8,7 @@ use amethyst_core::{
 };
 use clipboard::{ClipboardContext, ClipboardProvider};
 use log::error;
-use std::{
-    cmp,
-    ops::Range,
-};
+use std::cmp;
 use unicode_normalization::{
     UnicodeNormalization,
     char::is_combining_mark,
@@ -29,13 +26,20 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
         .expect("Failed to create clipboard context");
 
     SystemBuilder::<()>::new("TextEditingInputSystem")
+        .with_query(Write::<UiText>::query())
         .read_resource::<EventChannel<Event>>()
         .read_resource::<SelectedEntities>()
         .write_resource::<EventChannel<UiEvent>>()
         .write_component::<UiText>()
         .write_component::<TextEditing>()
-        .build(move |_, world, resources, queries| {
+        .build(move |_, world, resources, query| {
             let (winit_events, selected, ui_events) = resources;
+
+            for mut ui_text in query.iter_mut(world) {
+                if ui_text.text.chars().any(is_combining_mark) {
+                    ui_text.text = ui_text.text.nfd().collect();
+                }
+            }
 
             for event in winit_events.read(&mut winit_reader_id) {
                 if let Some(entity) = selected.last_entity() {

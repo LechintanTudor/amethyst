@@ -4,14 +4,12 @@ use crate::{
     utils,
 };
 use amethyst_core::{
-    Hidden, HiddenPropagate,
     ecs::prelude::*,
     math::Vector2,
     shrev::EventChannel,
 };
 use amethyst_input::{BindingTypes, InputHandler};
 use amethyst_window::ScreenDimensions;
-use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use winit::MouseButton;
 
@@ -55,22 +53,6 @@ impl UiEvent {
     pub fn new(event_type: UiEventType, target: Entity) -> Self {
         Self { event_type, target }
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Interactable;
-
-pub fn build_ui_mouse_system2<T>(_: &mut World, _: &mut Resources) -> Box<dyn Schedulable>
-where T: BindingTypes
-{
-    SystemBuilder::<()>::new("UiMouseSystem")
-        .read_resource::<InputHandler<T>>()
-        .read_resource::<ScreenDimensions>()
-        .read_resource::<SortedWidgets>()
-        .write_resource::<EventChannel<UiEvent>>()
-        .build(move |_, world, resources, queries| {
-
-        })
 }
 
 pub fn build_ui_mouse_system<T>(_world: &mut World, _resources: &mut Resources) -> Box<dyn Schedulable>

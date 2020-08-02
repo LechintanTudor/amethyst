@@ -43,22 +43,30 @@ pub fn highlighted_text_str<'a>(text_editing: &TextEditing, text: &'a str) -> &'
 }
 
 pub fn delete_highlighted_text(text_editing: &mut TextEditing, ui_text: &mut UiText) -> bool {
+    delete_highlighted_text_string(text_editing, &mut ui_text.text)
+}
+
+pub fn delete_highlighted_text_string(text_editing: &mut TextEditing, text: &mut String) -> bool {
     if text_editing.highlight_vector == 0 {
         return false;
     }
 
-    let range = highlighted_bytes_range(text_editing, ui_text);
+    let range = highlighted_bytes_range_str(text_editing, text);
     text_editing.cursor_position = range.start as isize;
     text_editing.highlight_vector = 0;
 
-    ui_text.text.replace_range(range, "");
+    text.replace_range(range, "");
     true
 }
 
 pub fn extract_highlighted_text(text_editing: &mut TextEditing, ui_text: &mut UiText) -> String {
-    let range = highlighted_bytes_range(text_editing, ui_text);
+    extract_highlighted_text_string(text_editing, &mut ui_text.text)
+}
+
+pub fn extract_highlighted_text_string(text_editing: &mut TextEditing, text: &mut String) -> String {
+    let range = highlighted_bytes_range_str(text_editing, text);
     text_editing.cursor_position = range.start as isize;
     text_editing.highlight_vector = 0;
 
-    ui_text.text.drain(range).collect()
+    text.drain(range).collect()
 }

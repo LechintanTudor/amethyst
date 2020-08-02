@@ -36,7 +36,7 @@ impl UiButtonBuilderTarget for World {
     where
         C: Component
     {
-        self.add_component(entity, component).unwrap();
+        World::add_component(self, entity, component).unwrap();
     }
 }
 
@@ -49,7 +49,7 @@ impl UiButtonBuilderTarget for CommandBuffer {
     where
         C: Component
     {
-        self.add_component(entity, component);
+        CommandBuffer::add_component(self, entity, component);
     }
 }
 

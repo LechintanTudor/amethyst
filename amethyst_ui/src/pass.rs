@@ -556,7 +556,6 @@ where
             batches.insert(white_texture_id, Some(args));
             false
         }
-        _ => false,
     }
 }
 

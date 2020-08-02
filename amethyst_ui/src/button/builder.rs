@@ -1,14 +1,9 @@
 use crate::{
-    Anchor, FontAsset, Parent, Stretch, UiButton, UiButtonAction, UiButtonActionType,
-    UiButtonActionRetrigger, UiImage, UiText, UiTransform,
+    Anchor, FontAsset, Parent, Stretch, UiButton, UiButtonAction, UiButtonActionRetrigger,
+    UiButtonActionType, UiImage, UiText, UiTransform,
 };
 use amethyst_assets::Handle;
-use amethyst_core::{
-    ecs::{
-        prelude::*,
-        storage::Component,
-    },
-};
+use amethyst_core::ecs::{prelude::*, storage::Component};
 use amethyst_rendy::palette::Srgba;
 use smallvec::SmallVec;
 
@@ -34,7 +29,7 @@ impl UiButtonBuilderTarget for World {
 
     fn add_component<C>(&mut self, entity: Entity, component: C)
     where
-        C: Component
+        C: Component,
     {
         World::add_component(self, entity, component).unwrap();
     }
@@ -47,7 +42,7 @@ impl UiButtonBuilderTarget for CommandBuffer {
 
     fn add_component<C>(&mut self, entity: Entity, component: C)
     where
-        C: Component
+        C: Component,
     {
         CommandBuffer::add_component(self, entity, component);
     }
@@ -135,7 +130,7 @@ impl UiButtonBuilder {
 
     pub fn with_text<S>(mut self, text: S) -> Self
     where
-        S: ToString
+        S: ToString,
     {
         self.text = text.to_string();
         self
@@ -147,14 +142,18 @@ impl UiButtonBuilder {
     }
 
     pub fn with_hover_text_color(mut self, text_color: Srgba) -> Self {
-        self.on_hover_start.push(UiButtonActionType::SetTextColor(text_color));
-        self.on_hover_stop.push(UiButtonActionType::UnsetTextColor(text_color));
+        self.on_hover_start
+            .push(UiButtonActionType::SetTextColor(text_color));
+        self.on_hover_stop
+            .push(UiButtonActionType::UnsetTextColor(text_color));
         self
     }
 
     pub fn with_press_text_color(mut self, text_color: Srgba) -> Self {
-        self.on_click_start.push(UiButtonActionType::SetTextColor(text_color));
-        self.on_click_stop.push(UiButtonActionType::UnsetTextColor(text_color));
+        self.on_click_start
+            .push(UiButtonActionType::SetTextColor(text_color));
+        self.on_click_stop
+            .push(UiButtonActionType::UnsetTextColor(text_color));
         self
     }
 
@@ -174,14 +173,18 @@ impl UiButtonBuilder {
     }
 
     pub fn with_hover_image(mut self, image: UiImage) -> Self {
-        self.on_hover_start.push(UiButtonActionType::SetImage(image.clone()));
-        self.on_hover_stop.push(UiButtonActionType::UnsetImage(image));
+        self.on_hover_start
+            .push(UiButtonActionType::SetImage(image.clone()));
+        self.on_hover_stop
+            .push(UiButtonActionType::UnsetImage(image));
         self
     }
 
     pub fn with_press_image(mut self, image: UiImage) -> Self {
-        self.on_click_start.push(UiButtonActionType::SetImage(image.clone()));
-        self.on_click_stop.push(UiButtonActionType::UnsetImage(image));
+        self.on_click_start
+            .push(UiButtonActionType::SetImage(image.clone()));
+        self.on_click_stop
+            .push(UiButtonActionType::UnsetImage(image));
         self
     }
 
@@ -192,7 +195,7 @@ impl UiButtonBuilder {
 
     pub fn build<T>(self, target: &mut T) -> UiButton
     where
-        T: UiButtonBuilderTarget
+        T: UiButtonBuilderTarget,
     {
         let entity = target.create_entity();
 
@@ -234,22 +237,10 @@ impl UiButtonBuilder {
             target.add_component(
                 entity,
                 UiButtonActionRetrigger {
-                    on_click_start: actions_with_target(
-                        self.on_click_start.into_iter(),
-                        entity,
-                    ),
-                    on_click_stop: actions_with_target(
-                        self.on_click_stop.into_iter(),
-                        entity,
-                    ),
-                    on_hover_start: actions_with_target(
-                        self.on_hover_start.into_iter(),
-                        entity,
-                    ),
-                    on_hover_stop: actions_with_target(
-                        self.on_hover_stop.into_iter(),
-                        entity,
-                    ),
+                    on_click_start: actions_with_target(self.on_click_start.into_iter(), entity),
+                    on_click_stop: actions_with_target(self.on_click_stop.into_iter(), entity),
+                    on_hover_start: actions_with_target(self.on_hover_start.into_iter(), entity),
+                    on_hover_stop: actions_with_target(self.on_hover_stop.into_iter(), entity),
                 },
             );
         }
@@ -262,5 +253,7 @@ fn actions_with_target<I>(actions: I, target: Entity) -> Vec<UiButtonAction>
 where
     I: Iterator<Item = UiButtonActionType>,
 {
-    actions.map(|action| UiButtonAction::new(target, action)).collect()
+    actions
+        .map(|action| UiButtonAction::new(target, action))
+        .collect()
 }

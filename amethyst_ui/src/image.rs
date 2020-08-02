@@ -1,8 +1,5 @@
 use amethyst_assets::Handle;
-use amethyst_rendy::{
-    SpriteRender, Texture,
-    palette::Srgba,
-};
+use amethyst_rendy::{palette::Srgba, SpriteRender, Texture};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum UiImage {

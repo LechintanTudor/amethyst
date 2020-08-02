@@ -1,13 +1,7 @@
 use crate::{UiButtonAction, UiButtonActionType, UiImage, UiText};
-use amethyst_core::{
-    ecs::prelude::*,
-    shrev::EventChannel,
-};
+use amethyst_core::{ecs::prelude::*, shrev::EventChannel};
 use amethyst_rendy::palette::Srgba;
-use std::{
-    collections::HashMap,
-    fmt::Debug,
-};
+use std::{collections::HashMap, fmt::Debug};
 
 #[derive(Debug)]
 struct ActionChangeStack<T>
@@ -20,7 +14,7 @@ where
 
 impl<T> ActionChangeStack<T>
 where
-    T: Clone + PartialEq + Debug
+    T: Clone + PartialEq + Debug,
 {
     fn new(initial_value: T) -> Self {
         Self {
@@ -47,17 +41,15 @@ where
         if self.change_stack.is_empty() {
             self.initial_value.clone()
         } else {
-            self.change_stack
-            .iter()
-            .rev()
-            .next()
-            .unwrap()
-            .clone()
+            self.change_stack.iter().rev().next().unwrap().clone()
         }
     }
 }
 
-pub fn build_ui_button_system(_world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable> {
+pub fn build_ui_button_system(
+    _world: &mut World,
+    resources: &mut Resources,
+) -> Box<dyn Schedulable> {
     let mut action_reader = resources
         .get_mut_or_default::<EventChannel<UiButtonAction>>()
         .unwrap()
@@ -70,7 +62,7 @@ pub fn build_ui_button_system(_world: &mut World, resources: &mut Resources) -> 
         .read_resource::<EventChannel<UiButtonAction>>()
         .write_component::<UiImage>()
         .write_component::<UiText>()
-        .build(move|_, world, actions, _| {
+        .build(move |_, world, actions, _| {
             for action in actions.read(&mut action_reader) {
                 match action.kind {
                     UiButtonActionType::SetTextColor(color) => {

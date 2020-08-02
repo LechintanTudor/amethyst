@@ -86,15 +86,16 @@ pub enum Stretch {
     },
 }
 
-pub fn build_ui_transform_system(_world: &mut World, _resources: &mut Resources) -> Box<dyn Schedulable> {
+pub fn build_ui_transform_system(
+    _world: &mut World,
+    _resources: &mut Resources,
+) -> Box<dyn Schedulable> {
     let mut entities = Vec::<Entity>::new();
     let mut solved_transforms = BitSet::new();
 
     SystemBuilder::<()>::new("UiTransformSystem")
         .read_resource::<ScreenDimensions>()
-        .with_query(
-            <(TryRead<Parent>,)>::query().filter(component::<UiTransform>()),
-        )
+        .with_query(<(TryRead<Parent>,)>::query().filter(component::<UiTransform>()))
         .read_component::<Parent>()
         .write_component::<UiTransform>()
         .build(move |_, world, resources, query| {
@@ -108,7 +109,13 @@ pub fn build_ui_transform_system(_world: &mut World, _resources: &mut Resources)
             solved_transforms.clear();
 
             for entity in entities.iter() {
-                solve_transform(*entity, screen_width, screen_height, world, &mut solved_transforms);
+                solve_transform(
+                    *entity,
+                    screen_width,
+                    screen_height,
+                    world,
+                    &mut solved_transforms,
+                );
             }
         })
 }
@@ -118,45 +125,39 @@ fn solve_transform<E>(
     screen_width: f32,
     screen_height: f32,
     world: &mut E,
-    solved_transforms: &mut BitSet
-)
-where
-    E: EntityStore
+    solved_transforms: &mut BitSet,
+) where
+    E: EntityStore,
 {
     // Mark transform as solved and skip solved transforms
     if !solved_transforms.insert(entity.index() as usize) {
         return;
     }
 
-    let (
-        parent_pixel_x,
-        parent_pixel_y,
-        parent_global_z,
-        parent_pixel_width,
-        parent_pixel_height,
-    ) = match world.get_component::<Parent>(entity).map(|p| *p) {
-        Some(Parent(parent)) => {
-            solve_transform(parent, screen_width, screen_height, world, solved_transforms);
+    let (parent_pixel_x, parent_pixel_y, parent_global_z, parent_pixel_width, parent_pixel_height) =
+        match world.get_component::<Parent>(entity).map(|p| *p) {
+            Some(Parent(parent)) => {
+                solve_transform(
+                    parent,
+                    screen_width,
+                    screen_height,
+                    world,
+                    solved_transforms,
+                );
 
-            match world.get_component::<UiTransform>(parent) {
-                Some(transform) => (
-                    transform.pixel_x,
-                    transform.pixel_y,
-                    transform.global_z,
-                    transform.pixel_width,
-                    transform.pixel_height,
-                ),
-                None => return,
+                match world.get_component::<UiTransform>(parent) {
+                    Some(transform) => (
+                        transform.pixel_x,
+                        transform.pixel_y,
+                        transform.global_z,
+                        transform.pixel_width,
+                        transform.pixel_height,
+                    ),
+                    None => return,
+                }
             }
-        }
-        None => (
-            0.0,
-            0.0,
-            0.0,
-            screen_width,
-            screen_height,
-        )
-    };
+            None => (0.0, 0.0, 0.0, screen_width, screen_height),
+        };
 
     if let Some(mut transform) = world.get_component_mut::<UiTransform>(entity) {
         modify_transform_bounds(
@@ -177,8 +178,7 @@ fn modify_transform_bounds(
     parent_global_z: f32,
     parent_pixel_width: f32,
     parent_pixel_height: f32,
-)
-{
+) {
     let (offset_x, offset_y) = transform.anchor.normalized_offset();
     transform.pixel_x = parent_pixel_x + offset_x * parent_pixel_width;
     transform.pixel_y = parent_pixel_y + offset_y * parent_pixel_height;
@@ -187,26 +187,28 @@ fn modify_transform_bounds(
 
     let (new_width, new_height) = match transform.stretch {
         Stretch::NoStretch => (transform.width, transform.height),
-        Stretch::X { x_margin } => (
-            parent_pixel_width - x_margin * 2.0,
-            transform.height,
-        ),
-        Stretch::Y { y_margin } => (
-            transform.width,
-            parent_pixel_height - y_margin * 2.0,
-        ),
-        Stretch::XY { x_margin, y_margin, keep_aspect_ratio: false } => (
+        Stretch::X { x_margin } => (parent_pixel_width - x_margin * 2.0, transform.height),
+        Stretch::Y { y_margin } => (transform.width, parent_pixel_height - y_margin * 2.0),
+        Stretch::XY {
+            x_margin,
+            y_margin,
+            keep_aspect_ratio: false,
+        } => (
             parent_pixel_width - x_margin * 2.0,
             parent_pixel_height - y_margin * 2.0,
         ),
-        Stretch::XY { x_margin, y_margin, keep_aspect_ratio: true } => {
+        Stretch::XY {
+            x_margin,
+            y_margin,
+            keep_aspect_ratio: true,
+        } => {
             let scale = f32::min(
                 (parent_pixel_width - x_margin * 2.0) / transform.width,
                 (parent_pixel_height - y_margin * 2.0) / transform.height,
             );
 
             (transform.width * scale, transform.height * scale)
-        },
+        }
     };
 
     transform.width = new_width;
@@ -218,13 +220,13 @@ fn modify_transform_bounds(
             transform.pixel_y += transform.local_y;
             transform.pixel_width = transform.width;
             transform.pixel_height = transform.height;
-        },
+        }
         ScaleMode::Percent => {
             transform.pixel_x += transform.local_x * parent_pixel_width;
             transform.pixel_y += transform.local_y * parent_pixel_height;
             transform.pixel_width = transform.width * parent_pixel_width;
             transform.pixel_height = transform.height * parent_pixel_height;
-        },
+        }
     }
 
     let (offset_x, offset_y) = transform.pivot.normalized_offset();

@@ -1,11 +1,7 @@
 use crate::{
-    SelectedEntities, TextEditing, UiImage, UiTransform,
-    renderer::{
-        UiGlyphs, UiGlyphsResource,
-        utils,
-    },
+    renderer::{utils, UiGlyphs, UiGlyphsResource},
     sorted::SortedWidgets,
-    systems,
+    systems, SelectedEntities, TextEditing, UiImage, UiTransform,
 };
 use amethyst_assets::{AssetStorage, Handle, Loader};
 use amethyst_core::{
@@ -76,15 +72,14 @@ impl RenderUi {
 
 impl<B> RenderPlugin<B> for RenderUi
 where
-    B: Backend
+    B: Backend,
 {
     fn on_build(
         &mut self,
         _world: &mut World,
         _resources: &mut Resources,
         builder: &mut DispatcherBuilder<'_>,
-    ) -> Result<(), Error>
-    {
+    ) -> Result<(), Error> {
         builder.add_system(Stage::Render, systems::build_ui_glyphs_system::<B>);
         Ok(())
     }
@@ -94,9 +89,8 @@ where
         plan: &mut RenderPlan<B>,
         _factory: &mut Factory<B>,
         _world: &World,
-        _resources: &Resources
-    ) -> Result<(), Error>
-    {
+        _resources: &Resources,
+    ) -> Result<(), Error> {
         plan.extend_target(self.target, |ctx| {
             ctx.add(RenderOrder::Overlay, DrawUiDesc::new().builder())?;
             Ok(())
@@ -116,7 +110,7 @@ impl DrawUiDesc {
 
 impl<B> RenderGroupDesc<B, GraphAuxData> for DrawUiDesc
 where
-    B: Backend
+    B: Backend,
 {
     fn build<'a>(
         self,
@@ -128,9 +122,8 @@ where
         framebuffer_height: u32,
         subpass: hal::pass::Subpass<'_, B>,
         _buffers: Vec<NodeBuffer>,
-        _images: Vec<NodeImage>
-    ) -> Result<Box<dyn RenderGroup<B, GraphAuxData>>, failure::Error>
-    {
+        _images: Vec<NodeImage>,
+    ) -> Result<Box<dyn RenderGroup<B, GraphAuxData>>, failure::Error> {
         #[cfg(feature = "profiler")]
         profile_scope!("build");
 
@@ -151,7 +144,7 @@ where
         let white_texture = loader.load_from_data(
             load_from_srgba(Srgba::new(1.0, 1.0, 1.0, 1.0)).into(),
             (),
-            &texture_storage
+            &texture_storage,
         );
 
         Ok(Box::new(DrawUi::<B> {
@@ -203,7 +196,7 @@ struct UiViewArgs {
 #[derive(Debug)]
 pub struct DrawUi<B>
 where
-    B: Backend
+    B: Backend,
 {
     pipeline: B::GraphicsPipeline,
     pipeline_layout: B::PipelineLayout,
@@ -217,7 +210,7 @@ where
 
 impl<B> RenderGroup<B, GraphAuxData> for DrawUi<B>
 where
-    B: Backend
+    B: Backend,
 {
     fn prepare(
         &mut self,
@@ -226,13 +219,14 @@ where
         index: usize,
         _subpass: hal::pass::Subpass<'_, B>,
         aux: &GraphAuxData,
-    ) -> PrepareResult
-    {
+    ) -> PrepareResult {
         #[cfg(feature = "profiler")]
         profile_scope!("prepare");
 
         let mut changed = false;
-        let glyph_texture = aux.resources.get::<UiGlyphsResource>()
+        let glyph_texture = aux
+            .resources
+            .get::<UiGlyphsResource>()
             .unwrap()
             .glyph_texture()
             .cloned();
@@ -265,11 +259,18 @@ where
 
         // Batches
         self.batches.swap_clear();
-        let selected = aux.resources.get::<SelectedEntities>().map(|s| s.last()).flatten();
+        let selected = aux
+            .resources
+            .get::<SelectedEntities>()
+            .map(|s| s.last())
+            .flatten();
 
         for &(entity, _) in aux.resources.get::<SortedWidgets>().unwrap().widgets() {
             let transform = aux.world.get_component::<UiTransform>(entity).unwrap();
-            let tint = aux.world.get_component::<Tint>(entity).map(|t| t.as_ref().clone());
+            let tint = aux
+                .world
+                .get_component::<Tint>(entity)
+                .map(|t| t.as_ref().clone());
 
             if let Some(image) = aux.world.get_component::<UiImage>(entity) {
                 changed |= render_image(
@@ -286,7 +287,10 @@ where
 
             if let Some(glyph_data) = aux.world.get_component::<UiGlyphs>(entity) {
                 if !glyph_data.selection_vertices.is_empty() {
-                    self.batches.insert(white_texture_id, glyph_data.selection_vertices.iter().cloned());
+                    self.batches.insert(
+                        white_texture_id,
+                        glyph_data.selection_vertices.iter().cloned(),
+                    );
                 }
 
                 if selected == Some(entity) {
@@ -335,7 +339,8 @@ where
                 }
 
                 if !glyph_data.vertices.is_empty() {
-                    self.batches.insert(glyph_texture_id, glyph_data.vertices.iter().cloned());
+                    self.batches
+                        .insert(glyph_texture_id, glyph_data.vertices.iter().cloned());
                 }
             }
         }
@@ -360,7 +365,8 @@ where
                 inverse_window_half_size: [
                     1.0 / (screen_dimensions.width() as f32 / 2.0),
                     1.0 / (screen_dimensions.height() as f32 / 2.0),
-                ].into(),
+                ]
+                .into(),
             };
 
             changed |= self.env.write(factory, index, view_args.std140());
@@ -375,8 +381,7 @@ where
         index: usize,
         _subpass: hal::pass::Subpass<'_, B>,
         _aux: &GraphAuxData,
-    )
-    {
+    ) {
         #[cfg(feature = "profiler")]
         profile_scope!("draw");
 
@@ -386,7 +391,8 @@ where
             self.vertex.bind(index, 0, 0, &mut encoder);
 
             for (&texture, range) in self.batches.iter() {
-                self.textures.bind(&self.pipeline_layout, 1, texture, &mut encoder);
+                self.textures
+                    .bind(&self.pipeline_layout, 1, texture, &mut encoder);
                 unsafe {
                     encoder.draw(0..4, range);
                 }
@@ -397,7 +403,9 @@ where
     fn dispose(self: Box<Self>, factory: &mut Factory<B>, _aux: &GraphAuxData) {
         unsafe {
             factory.device().destroy_graphics_pipeline(self.pipeline);
-            factory.device().destroy_pipeline_layout(self.pipeline_layout);
+            factory
+                .device()
+                .destroy_pipeline_layout(self.pipeline_layout);
         }
     }
 }
@@ -410,7 +418,7 @@ fn build_ui_pipeline<B>(
     layouts: Vec<&B::DescriptorSetLayout>,
 ) -> Result<(B::GraphicsPipeline, B::PipelineLayout), failure::Error>
 where
-    B: Backend
+    B: Backend,
 {
     let pipeline_layout = unsafe {
         factory
@@ -464,7 +472,7 @@ fn render_image<B>(
     resources: &Resources,
 ) -> bool
 where
-    B: Backend
+    B: Backend,
 {
     let color = utils::mul_blend_lin_rgba_arrays(image_color(image), tint_color(tint));
 
@@ -490,7 +498,13 @@ where
                 false
             }
         }
-        UiImage::PartialTexture { texture, left, top, right, bottom } => {
+        UiImage::PartialTexture {
+            texture,
+            left,
+            top,
+            right,
+            bottom,
+        } => {
             if let Some((texture_id, changed)) = textures.insert(
                 factory,
                 resources,
@@ -531,7 +545,8 @@ where
                             tex_coords.top,
                             tex_coords.right,
                             tex_coords.bottom,
-                        ].into(),
+                        ]
+                        .into(),
                         color: color.into(),
                         color_bias: [0.0, 0.0, 0.0, 0.0].into(),
                     };
@@ -578,6 +593,6 @@ fn tint_color(tint: Option<Tint>) -> [f32; 4] {
             let (r, g, b, a) = color.into_linear().into_components();
             [r, g, b, a]
         }
-        None => [1.0, 1.0, 1.0, 1.0]
+        None => [1.0, 1.0, 1.0, 1.0],
     }
 }

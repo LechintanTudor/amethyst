@@ -1,7 +1,4 @@
-use crate::{
-    EventReceiver, EventRetrigger, UiButtonAction, UiEvent, UiEventType,
-    systems,
-};
+use crate::{systems, EventReceiver, EventRetrigger, UiButtonAction, UiEvent, UiEventType};
 use amethyst_core::ecs::prelude::*;
 
 #[derive(Clone, Default, Debug)]
@@ -18,7 +15,7 @@ impl EventRetrigger for UiButtonActionRetrigger {
 
     fn apply<R>(&self, event: &Self::In, receiver: &mut R)
     where
-        R: EventReceiver<Self::Out>
+        R: EventReceiver<Self::Out>,
     {
         match event.event_type {
             UiEventType::ClickStart => receiver.receive(&self.on_click_start),
@@ -33,7 +30,6 @@ impl EventRetrigger for UiButtonActionRetrigger {
 pub fn build_ui_button_action_retrigger_system(
     world: &mut World,
     resources: &mut Resources,
-) -> Box<dyn Schedulable>
-{
+) -> Box<dyn Schedulable> {
     systems::build_event_retrigger_system::<UiButtonActionRetrigger>(world, resources)
 }

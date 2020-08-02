@@ -26,9 +26,18 @@ pub struct UiTransform {
 }
 
 impl UiTransform {
-    pub fn new<S>(id: S, anchor: Anchor, pivot: Anchor, x: f32, y: f32, z: f32, width: f32, height: f32) -> Self
+    pub fn new<S>(
+        id: S,
+        anchor: Anchor,
+        pivot: Anchor,
+        x: f32,
+        y: f32,
+        z: f32,
+        width: f32,
+        height: f32,
+    ) -> Self
     where
-        S: ToString
+        S: ToString,
     {
         Self {
             id: id.to_string(),
@@ -52,17 +61,17 @@ impl UiTransform {
     }
 
     pub fn position_inside_local(&self, x: f32, y: f32) -> bool {
-        x > self.local_x - self.width / 2.0 &&
-        y > self.local_y - self.height / 2.0 &&
-        x < self.local_x + self.width / 2.0 &&
-        y < self.local_y + self.height / 2.0
+        x > self.local_x - self.width / 2.0
+            && y > self.local_y - self.height / 2.0
+            && x < self.local_x + self.width / 2.0
+            && y < self.local_y + self.height / 2.0
     }
 
     pub fn position_inside(&self, x: f32, y: f32) -> bool {
-        x > self.pixel_x - self.pixel_width / 2.0 &&
-        y > self.pixel_y - self.pixel_height / 2.0 &&
-        x < self.pixel_x + self.pixel_width / 2.0 &&
-        y < self.pixel_y + self.pixel_height / 2.0
+        x > self.pixel_x - self.pixel_width / 2.0
+            && y > self.pixel_y - self.pixel_height / 2.0
+            && x < self.pixel_x + self.pixel_width / 2.0
+            && y < self.pixel_y + self.pixel_height / 2.0
     }
 
     pub fn into_percent(mut self) -> Self {
@@ -107,14 +116,11 @@ pub fn get_parent_pixel_size<E>(
     screen_dimensions: &ScreenDimensions,
 ) -> (f32, f32)
 where
-    E: EntityStore
+    E: EntityStore,
 {
     if let Some(parent) = world.get_component::<Parent>(entity) {
         if let Some(transform) = world.get_component::<UiTransform>(parent.0) {
-            return (
-                transform.pixel_width,
-                transform.pixel_height,
-            );
+            return (transform.pixel_width, transform.pixel_height);
         }
     }
 
@@ -131,8 +137,11 @@ mod tests {
             "".to_string(),
             Anchor::TopLeft,
             Anchor::Middle,
-            0.0, 0.0, 0.0,
-            1.0, 1.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
         );
 
         assert!(transform.position_inside_local(-0.49, 0.20));
@@ -145,8 +154,11 @@ mod tests {
             "".to_string(),
             Anchor::TopLeft,
             Anchor::Middle,
-            0.0, 0.0, 0.0,
-            1.0, 1.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
         );
 
         assert!(transform.position_inside(-0.49, 0.20));

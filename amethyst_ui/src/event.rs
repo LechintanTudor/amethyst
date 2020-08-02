@@ -1,13 +1,5 @@
-use crate::{
-    UiTransform,
-    sorted::SortedWidgets,
-    utils,
-};
-use amethyst_core::{
-    ecs::prelude::*,
-    math::Vector2,
-    shrev::EventChannel,
-};
+use crate::{sorted::SortedWidgets, utils, UiTransform};
+use amethyst_core::{ecs::prelude::*, math::Vector2, shrev::EventChannel};
 use amethyst_input::{BindingTypes, InputHandler};
 use amethyst_window::ScreenDimensions;
 use std::collections::HashSet;
@@ -55,8 +47,12 @@ impl UiEvent {
     }
 }
 
-pub fn build_ui_mouse_system<T>(_world: &mut World, _resources: &mut Resources) -> Box<dyn Schedulable>
-where T: BindingTypes
+pub fn build_ui_mouse_system<T>(
+    _world: &mut World,
+    _resources: &mut Resources,
+) -> Box<dyn Schedulable>
+where
+    T: BindingTypes,
 {
     let mut mouse_was_down = false;
     let mut click_started_on = HashSet::<Entity>::new();
@@ -116,9 +112,10 @@ where T: BindingTypes
 pub fn get_targeted<E>(
     (mouse_x, mouse_y): (f32, f32),
     sorted_widgets: &SortedWidgets,
-    world: &E
+    world: &E,
 ) -> HashSet<Entity>
-where E: EntityStore
+where
+    E: EntityStore,
 {
     let mut entities = HashSet::<Entity>::new();
 
@@ -144,7 +141,8 @@ pub fn get_targeted_below<E>(
     sorted_widgets: &SortedWidgets,
     world: &E,
 ) -> Option<Entity>
-where E: EntityStore
+where
+    E: EntityStore,
 {
     let entities_below_z = sorted_widgets
         .widgets()
@@ -166,9 +164,8 @@ where E: EntityStore
 
 pub fn mouse_world_position(
     (mouse_x, mouse_y): (f32, f32),
-    screen_dimensions: &ScreenDimensions
-) -> (f32, f32)
-{
+    screen_dimensions: &ScreenDimensions,
+) -> (f32, f32) {
     (
         mouse_x - screen_dimensions.width() / 2.0,
         screen_dimensions.height() - mouse_y - screen_dimensions.height() / 2.0,

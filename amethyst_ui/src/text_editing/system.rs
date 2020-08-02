@@ -1,29 +1,24 @@
 use crate::{
-    LineMode, SelectedEntities, TextEditing, UiEvent, UiEventType, UiText,
-    text_editing::*,
+    text_editing::*, LineMode, SelectedEntities, TextEditing, UiEvent, UiEventType, UiText,
 };
-use amethyst_core::{
-    ecs::prelude::*,
-    shrev::EventChannel,
-};
+use amethyst_core::{ecs::prelude::*, shrev::EventChannel};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use log::error;
 use std::cmp;
-use unicode_normalization::{
-    UnicodeNormalization,
-    char::is_combining_mark,
-};
+use unicode_normalization::{char::is_combining_mark, UnicodeNormalization};
 use unicode_segmentation::UnicodeSegmentation;
 use winit::{ElementState, Event, KeyboardInput, ModifiersState, VirtualKeyCode, WindowEvent};
 
-pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources) -> Box<dyn Schedulable> {
+pub fn build_text_editing_input_system(
+    _: &mut World,
+    resources: &mut Resources,
+) -> Box<dyn Schedulable> {
     let mut winit_reader_id = resources
         .get_mut::<EventChannel<Event>>()
         .expect("`EventChannel<Event>` was not found in resources")
         .register_reader();
 
-    let mut clipboard = ClipboardContext::new()
-        .expect("Failed to create clipboard context");
+    let mut clipboard = ClipboardContext::new().expect("Failed to create clipboard context");
 
     SystemBuilder::<()>::new("TextEditingInputSystem")
         .with_query(Write::<UiText>::query())
@@ -334,11 +329,11 @@ pub fn build_text_editing_input_system(_: &mut World, resources: &mut Resources)
 }
 
 fn should_skip_char(input: char) -> bool {
-    input < '\u{20}' ||
-    input == '\u{7F}'||
-    (input >= '\u{E000}' && input <= '\u{F8FF}') ||
-    (input >= '\u{F0000}' && input <= '\u{FFFFF}') ||
-    (input >= '\u{100000}' && input <= '\u{10FFFF}')
+    input < '\u{20}'
+        || input == '\u{7F}'
+        || (input >= '\u{E000}' && input <= '\u{F8FF}')
+        || (input >= '\u{F0000}' && input <= '\u{FFFFF}')
+        || (input >= '\u{100000}' && input <= '\u{10FFFF}')
 }
 
 fn ctrl_or_cmd(modifiers: ModifiersState) -> bool {

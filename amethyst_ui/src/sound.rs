@@ -1,13 +1,7 @@
 use crate::{EventReceiver, EventRetrigger, UiEvent, UiEventType};
 use amethyst_assets::AssetStorage;
-use amethyst_audio::{
-    Source, SourceHandle,
-    output::Output,
-};
-use amethyst_core::{
-    ecs::prelude::*,
-    shrev::EventChannel,
-};
+use amethyst_audio::{output::Output, Source, SourceHandle};
+use amethyst_core::{ecs::prelude::*, shrev::EventChannel};
 
 #[derive(Clone, Debug)]
 pub struct UiPlaySoundAction(pub SourceHandle);
@@ -26,7 +20,7 @@ impl EventRetrigger for UiSoundRetrigger {
 
     fn apply<R>(&self, event: &Self::In, receiver: &mut R)
     where
-        R: EventReceiver<Self::Out>
+        R: EventReceiver<Self::Out>,
     {
         let event_to_trigger = match event.event_type {
             UiEventType::ClickStart => &self.on_click_start,

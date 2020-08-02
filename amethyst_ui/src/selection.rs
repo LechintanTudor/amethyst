@@ -1,8 +1,5 @@
 use crate::{UiEvent, UiEventType};
-use amethyst_core::{
-    ecs::prelude::*,
-    shrev::EventChannel,
-};
+use amethyst_core::{ecs::prelude::*, shrev::EventChannel};
 use amethyst_input::{BindingTypes, InputHandler};
 use std::collections::HashSet;
 use winit::VirtualKeyCode;
@@ -56,7 +53,10 @@ where
     pub consumes_inputs: bool,
 }
 
-pub fn build_mouse_selection_system<T, G>(_world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
+pub fn build_mouse_selection_system<T, G>(
+    _world: &mut World,
+    resources: &mut Resources,
+) -> Box<dyn Schedulable>
 where
     T: BindingTypes,
     G: Send + Sync + PartialEq + 'static,
@@ -86,8 +86,10 @@ where
                         Some(selectable) => selectable,
                         None => {
                             emitted_ui_events.extend(
-                                selected.entities.drain()
-                                    .map(|e| UiEvent::new(UiEventType::Blur, e))
+                                selected
+                                    .entities
+                                    .drain()
+                                    .map(|e| UiEvent::new(UiEventType::Blur, e)),
                             );
                             continue;
                         }
@@ -95,7 +97,9 @@ where
 
                     let same_select_group = {
                         if let Some(last_entity) = selected.last() {
-                            if let Some(last_selectable) = world.get_component::<Selectable<G>>(last_entity) {
+                            if let Some(last_selectable) =
+                                world.get_component::<Selectable<G>>(last_entity)
+                            {
                                 last_selectable.multi_select_group == selectable.multi_select_group
                             } else {
                                 false

@@ -17,8 +17,7 @@ impl TextEditing {
         selected_text_color: Srgba,
         selected_background_color: Srgba,
         use_block_cursor: bool,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             cursor_position: 0,
             max_length,

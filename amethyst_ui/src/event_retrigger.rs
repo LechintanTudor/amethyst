@@ -1,9 +1,6 @@
 use crate::event::TargetedEvent;
 use amethyst_core::{
-    ecs::{
-        prelude::*,
-        storage::Component,
-    },
+    ecs::{prelude::*, storage::Component},
     shrev::{Event, EventChannel},
 };
 use std::ops::DerefMut;
@@ -16,7 +13,7 @@ pub trait EventReceiver<T> {
 
 impl<T> EventReceiver<T> for EventChannel<T>
 where
-    T: Event + Clone
+    T: Event + Clone,
 {
     fn receive_one(&mut self, value: &T) {
         self.single_write(value.clone());
@@ -39,9 +36,12 @@ where
         R: EventReceiver<Self::Out>;
 }
 
-pub fn build_event_retrigger_system<T>(_: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
+pub fn build_event_retrigger_system<T>(
+    _: &mut World,
+    resources: &mut Resources,
+) -> Box<dyn Schedulable>
 where
-    T: EventRetrigger
+    T: EventRetrigger,
 {
     let mut event_reader = resources
         .get_mut_or_default::<EventChannel<T::In>>()

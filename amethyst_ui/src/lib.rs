@@ -1,7 +1,7 @@
 //! Provides components and systems to create an in game user interface.
 pub use self::{
-    button::*,
     bundle::UiBundle,
+    button::*,
     drag::Draggable,
     event::{UiEvent, UiEventType},
     event_retrigger::*,
@@ -22,8 +22,8 @@ pub use self::{
 pub use amethyst_core::ecs::entity::Entity;
 pub use legion_transform::components::Parent;
 
-mod button;
 mod bundle;
+mod button;
 mod drag;
 mod event;
 mod event_retrigger;

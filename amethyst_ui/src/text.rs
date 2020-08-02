@@ -1,6 +1,4 @@
-use crate::{
-    Anchor, FontAsset,
-};
+use crate::{Anchor, FontAsset};
 use amethyst_assets::Handle;
 use amethyst_rendy::palette::Srgba;
 
@@ -32,7 +30,7 @@ pub struct UiText {
 impl UiText {
     pub fn new<S>(font: Handle<FontAsset>, text: S, color: Srgba, font_size: f32) -> Self
     where
-        S: ToString
+        S: ToString,
     {
         Self {
             text: text.to_string(),

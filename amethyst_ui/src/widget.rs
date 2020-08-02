@@ -20,7 +20,7 @@ macro_rules! define_widget_component_fn {
                     .expect("Component should exist on entity")
             }
         }
-    }
+    };
 }
 
 #[macro_export]

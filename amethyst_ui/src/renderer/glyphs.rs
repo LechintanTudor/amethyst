@@ -1,41 +1,26 @@
 use crate::{
-    FontAsset, LineMode, TextEditing, UiText, UiTransform,
-    renderer::{
-        UiArgs,
-        utils,
-    },
+    renderer::{utils, UiArgs},
     text::CachedGlyph,
+    FontAsset, LineMode, TextEditing, UiText, UiTransform,
 };
 use amethyst_assets::{AssetStorage, Handle};
-use amethyst_core::{
-    Hidden, HiddenPropagate,
-    ecs::prelude::*,
-};
+use amethyst_core::{ecs::prelude::*, Hidden, HiddenPropagate};
 use amethyst_rendy::{
-    Texture,
     rendy::{
         command::QueueId,
         factory::{Factory, ImageState},
         hal,
-        texture::{
-            TextureBuilder,
-            pixel::R8Unorm,
-        },
+        texture::{pixel::R8Unorm, TextureBuilder},
     },
     resources::Tint,
     types::Backend,
+    Texture,
 };
 use glyph_brush::{
-    *,
     ab_glyph::{Font, FontArc, PxScale, ScaleFont},
+    *,
 };
-use std::{
-    collections::HashMap,
-    cmp,
-    iter,
-    mem,
-    ops::Range,
-};
+use std::{cmp, collections::HashMap, iter, mem, ops::Range};
 use unicode_segmentation::UnicodeSegmentation;
 
 const INITIAL_CACHE_SIZE: (u32, u32) = (512, 512);
@@ -107,8 +92,12 @@ impl LineBreaker for CustomLineBreaker {
     }
 }
 
-pub fn build_ui_glyphs_system<B>(_world: &mut World, _resources: &mut Resources) -> Box<dyn Schedulable>
-where B: Backend
+pub fn build_ui_glyphs_system<B>(
+    _world: &mut World,
+    _resources: &mut Resources,
+) -> Box<dyn Schedulable>
+where
+    B: Backend,
 {
     let mut glyph_brush: GlyphBrush<(Entity, UiArgs), ExtraTextData> =
         GlyphBrushBuilder::using_fonts(Vec::<FontArc>::new())
@@ -131,7 +120,7 @@ where B: Backend
                 TryRead<Tint>,
                 TryRead<TextEditing>,
             )>::query()
-                .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
+            .filter(!component::<Hidden>() & !component::<HiddenPropagate>()),
         )
         .with_query(Write::<UiGlyphs>::query())
         .with_query(
@@ -142,7 +131,7 @@ where B: Backend
                 TryWrite<TextEditing>,
                 TryWrite<UiGlyphs>,
             )>::query()
-                .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
+            .filter(!component::<Hidden>() & !component::<HiddenPropagate>()),
         )
         .with_query(
             <(
@@ -151,7 +140,7 @@ where B: Backend
                 TryWrite<TextEditing>,
                 TryWrite<UiGlyphs>,
             )>::query()
-                .filter(!component::<Hidden>() & !component::<HiddenPropagate>())
+            .filter(!component::<Hidden>() & !component::<HiddenPropagate>()),
         )
         .write_component::<UiGlyphs>()
         .build(move |commands, world, resources, queries| {
@@ -168,7 +157,9 @@ where B: Backend
                 .and_then(B::unwrap_texture)
                 .expect("Glyph texture is created synchronously");
 
-            for (entity, (transform, mut ui_text, tint, text_editing)) in text_query.iter_entities_mut(world) {
+            for (entity, (transform, mut ui_text, tint, text_editing)) in
+                text_query.iter_entities_mut(world)
+            {
                 ui_text.cached_glyphs.clear();
 
                 let mut cached_glyphs = Vec::new();
@@ -178,9 +169,7 @@ where B: Backend
                     Some(font) => {
                         let font_id = *font_map
                             .entry(ui_text.font.id())
-                            .or_insert_with(|| {
-                                glyph_brush.add_font(font.0.clone())
-                            });
+                            .or_insert_with(|| glyph_brush.add_font(font.0.clone()));
 
                         (font, font_id)
                     }
@@ -202,14 +191,12 @@ where B: Backend
                 let scaled_font = font.0.as_scaled(scale);
 
                 let text = match (ui_text.password, text_editing) {
-                    (false, None) => vec![
-                        Text {
-                            text: &ui_text.text,
-                            scale,
-                            font_id,
-                            extra: ExtraTextData::new(entity, base_color),
-                        }
-                    ],
+                    (false, None) => vec![Text {
+                        text: &ui_text.text,
+                        scale,
+                        font_id,
+                        extra: ExtraTextData::new(entity, base_color),
+                    }],
                     (false, Some(text_editing)) => {
                         let selected_color = utils::mul_blend_lin_rgba_arrays(
                             utils::srgba_to_lin_rgba_array(text_editing.selected_text_color),
@@ -241,16 +228,14 @@ where B: Backend
                                 },
                             ]
                         } else {
-                            vec![
-                                Text {
-                                    text: &ui_text.text,
-                                    scale,
-                                    font_id,
-                                    extra: ExtraTextData::new(entity, base_color),
-                                },
-                            ]
+                            vec![Text {
+                                text: &ui_text.text,
+                                scale,
+                                font_id,
+                                extra: ExtraTextData::new(entity, base_color),
+                            }]
                         }
-                    },
+                    }
                     (true, None) => {
                         let grapheme_count = ui_text.text.graphemes(true).count();
 
@@ -262,11 +247,12 @@ where B: Backend
                                 extra: ExtraTextData::new(entity, base_color),
                             })
                             .collect()
-                    },
+                    }
                     (true, Some(text_editing)) => {
                         let grapheme_count = ui_text.text.graphemes(true).count();
                         let cursor_position = text_editing.cursor_position;
-                        let highlight_position = text_editing.cursor_position + text_editing.highlight_vector;
+                        let highlight_position =
+                            text_editing.cursor_position + text_editing.highlight_vector;
                         let start = cursor_position.min(highlight_position) as usize;
                         let to_end = cursor_position.max(highlight_position) as usize - start;
                         let rest = grapheme_count - to_end - start;
@@ -283,13 +269,12 @@ where B: Backend
                         ]
                         .iter()
                         .flat_map(|&(grapheme_count, color)| {
-                            password_sections(grapheme_count)
-                                .map(move |text| Text {
-                                    text,
-                                    scale,
-                                    font_id,
-                                    extra: ExtraTextData::new(entity, color),
-                                })
+                            password_sections(grapheme_count).map(move |text| Text {
+                                text,
+                                scale,
+                                font_id,
+                                extra: ExtraTextData::new(entity, color),
+                            })
                         })
                         .collect()
                     }
@@ -312,26 +297,23 @@ where B: Backend
 
                 let section = Section {
                     screen_position: (
-                        transform.pixel_x + transform.pixel_width
-                            * ui_text.align.normalized_offset().0,
-                        -(transform.pixel_y + transform.pixel_height
-                            * ui_text.align.normalized_offset().1),
+                        transform.pixel_x
+                            + transform.pixel_width * ui_text.align.normalized_offset().0,
+                        -(transform.pixel_y
+                            + transform.pixel_height * ui_text.align.normalized_offset().1),
                     ),
                     bounds: (transform.pixel_width, transform.pixel_height),
                     layout: Layout::default(),
                     text,
                 };
 
-                let mut visible_glyphs_iter = glyph_brush
-                    .glyphs_custom_layout(&section, &layout);
+                let mut visible_glyphs_iter = glyph_brush.glyphs_custom_layout(&section, &layout);
 
                 if ui_text.password {
-                    let all_glyphs_iter = visible_glyphs_iter.map(|section_glyph| {
-                        CachedGlyph {
-                            x: section_glyph.glyph.position.x,
-                            y: -section_glyph.glyph.position.y,
-                            advance_width: scaled_font.h_advance(section_glyph.glyph.id),
-                        }
+                    let all_glyphs_iter = visible_glyphs_iter.map(|section_glyph| CachedGlyph {
+                        x: section_glyph.glyph.position.x,
+                        y: -section_glyph.glyph.position.y,
+                        advance_width: scaled_font.h_advance(section_glyph.glyph.id),
                     });
 
                     cached_glyphs.extend(all_glyphs_iter);
@@ -354,7 +336,8 @@ where B: Backend
                                     let cached_glyph = CachedGlyph {
                                         x: section_glyph.glyph.position.x,
                                         y: -section_glyph.glyph.position.y,
-                                        advance_width: scaled_font.h_advance(section_glyph.glyph.id),
+                                        advance_width: scaled_font
+                                            .h_advance(section_glyph.glyph.id),
                                     };
 
                                     last_section_glyph = visible_glyphs_iter.next();
@@ -363,17 +346,16 @@ where B: Backend
                                     CachedGlyph {
                                         x,
                                         y,
-                                        advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
+                                        advance_width: scaled_font
+                                            .h_advance(scaled_font.glyph_id(c)),
                                     }
                                 }
                             }
-                            None => {
-                                CachedGlyph {
-                                    x,
-                                    y,
-                                    advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
-                                }
-                            }
+                            None => CachedGlyph {
+                                x,
+                                y,
+                                advance_width: scaled_font.h_advance(scaled_font.glyph_id(c)),
+                            },
                         };
 
                         last_cached_glyph = Some(cached_glyph);
@@ -454,20 +436,23 @@ where B: Backend
                             let old_height = coords_max_y - coords_min_y;
                             coords_max_y = bounds_max_y;
                             uv.max.y = uv.min.y
-                                + (uv.max.y - uv.min.y) * (coords_max_y - coords_min_y) / old_height;
+                                + (uv.max.y - uv.min.y) * (coords_max_y - coords_min_y)
+                                    / old_height;
                         }
                         if coords_min_y < bounds_min_y {
                             let old_height = coords_max_y - coords_min_y;
                             coords_min_y = bounds_min_y;
                             uv.min.y = uv.max.y
-                                - (uv.max.y - uv.min.y) * (coords_max_y - coords_min_y) / old_height;
+                                - (uv.max.y - uv.min.y) * (coords_max_y - coords_min_y)
+                                    / old_height;
                         }
 
                         let position = [
                             (coords_max_x + coords_min_x) / 2.0,
                             -(coords_max_y + coords_min_y) / 2.0,
                         ];
-                        let dimensions = [(coords_max_x - coords_min_x), (coords_max_y - coords_min_y)];
+                        let dimensions =
+                            [(coords_max_x - coords_min_x), (coords_max_y - coords_min_y)];
                         let tex_coords_bounds = [uv.min.x, uv.min.y, uv.max.x, uv.max.y];
 
                         (
@@ -492,7 +477,9 @@ where B: Backend
                             glyphs.vertices.clear();
                         }
 
-                        for (entity, (transform, ui_text, tint, text_editing, mut glyphs)) in glyph_draw_query.iter_entities_mut(world) {
+                        for (entity, (transform, ui_text, tint, text_editing, mut glyphs)) in
+                            glyph_draw_query.iter_entities_mut(world)
+                        {
                             let vertices = vertices[current_glyph..]
                                 .iter()
                                 .take_while(|(e, _)| *e == entity)
@@ -504,10 +491,13 @@ where B: Backend
                             if let Some(glyphs) = glyphs.as_mut() {
                                 glyphs.vertices.extend(vertices);
                             } else {
-                                commands.add_component(entity, UiGlyphs {
-                                    vertices: vertices.collect(),
-                                    ..UiGlyphs::default()
-                                });
+                                commands.add_component(
+                                    entity,
+                                    UiGlyphs {
+                                        vertices: vertices.collect(),
+                                        ..UiGlyphs::default()
+                                    },
+                                );
                             }
 
                             if let Some(text_editing) = text_editing {
@@ -520,7 +510,8 @@ where B: Backend
                                 let height = scaled_font.ascent() - scaled_font.descent();
                                 let offset = (scaled_font.ascent() + scaled_font.descent()) / 2.0;
 
-                                let highlight_range = highlighted_glyphs_range(&text_editing, &ui_text);
+                                let highlight_range =
+                                    highlighted_glyphs_range(&text_editing, &ui_text);
 
                                 let color = if let Some(tint) = tint {
                                     utils::mul_blend_srgba_to_lin_rgba_array(
@@ -528,13 +519,16 @@ where B: Backend
                                         &tint.0,
                                     )
                                 } else {
-                                    utils::srgba_to_lin_rgba_array(text_editing.selected_background_color)
+                                    utils::srgba_to_lin_rgba_array(
+                                        text_editing.selected_background_color,
+                                    )
                                 };
 
                                 let selection_ui_args_iter = ui_text.cached_glyphs[highlight_range]
                                     .iter()
                                     .map(|g| UiArgs {
-                                        position: [g.x + g.advance_width / 2.0, g.y + offset].into(),
+                                        position: [g.x + g.advance_width / 2.0, g.y + offset]
+                                            .into(),
                                         dimensions: [g.advance_width, height].into(),
                                         tex_coords_bounds: [0.0, 0.0, 1.0, 1.0].into(),
                                         color: color.into(),
@@ -544,7 +538,8 @@ where B: Backend
                                 if let Some(mut glyphs) = glyphs {
                                     glyphs.selection_vertices.extend(selection_ui_args_iter);
                                     glyphs.height = height;
-                                    glyphs.space_width = scaled_font.h_advance(scaled_font.glyph_id(' '));
+                                    glyphs.space_width =
+                                        scaled_font.h_advance(scaled_font.glyph_id(' '));
 
                                     update_cursor_position(
                                         &mut glyphs,
@@ -560,7 +555,9 @@ where B: Backend
                         break;
                     }
                     Ok(BrushAction::ReDraw) => {
-                        for (transform, ui_text, text_editing, glyphs) in glyph_redraw_query.iter_mut(world) {
+                        for (transform, ui_text, text_editing, glyphs) in
+                            glyph_redraw_query.iter_mut(world)
+                        {
                             if let (Some(text_editing), Some(mut glyphs)) = (text_editing, glyphs) {
                                 let font = font_storage
                                     .get(&ui_text.font)
@@ -572,7 +569,8 @@ where B: Backend
                                 let offset = (scaled_font.ascent() + scaled_font.descent()) / 2.0;
 
                                 glyphs.height = height;
-                                glyphs.space_width = scaled_font.h_advance(scaled_font.glyph_id(' '));
+                                glyphs.space_width =
+                                    scaled_font.h_advance(scaled_font.glyph_id(' '));
 
                                 update_cursor_position(
                                     &mut glyphs,
@@ -586,15 +584,12 @@ where B: Backend
 
                         break;
                     }
-                    Err(BrushError::TextureTooSmall { suggested: (width, height) }) => {
+                    Err(BrushError::TextureTooSmall {
+                        suggested: (width, height),
+                    }) => {
                         texture_storage.replace(
                             glyph_texture_handle,
-                            create_glyph_texture(
-                                factory,
-                                **queue,
-                                width,
-                                height,
-                            ),
+                            create_glyph_texture(factory, **queue, width, height),
                         );
 
                         glyph_texture = texture_storage
@@ -609,13 +604,22 @@ where B: Backend
         })
 }
 
-fn create_glyph_texture<B>(factory: &mut Factory<B>, queue: QueueId, width: u32, height: u32) -> Texture
-where B: Backend
+fn create_glyph_texture<B>(
+    factory: &mut Factory<B>,
+    queue: QueueId,
+    width: u32,
+    height: u32,
+) -> Texture
+where
+    B: Backend,
 {
     use hal::format::{Component as C, Swizzle};
 
-    log::trace!("Creating new glyph texture with size ({}, {})",
-        width, height);
+    log::trace!(
+        "Creating new glyph texture with size ({}, {})",
+        width,
+        height
+    );
 
     TextureBuilder::new()
         .with_kind(hal::image::Kind::D2(width, height, 1, 1))
@@ -645,19 +649,17 @@ fn update_cursor_position(
     transform: &UiTransform,
     cursor_position: usize,
     offset: f32,
-)
-{
-    glyph_data.cursor_position =
-        if let Some(glyph) = ui_text.cached_glyphs.get(cursor_position) {
-            (glyph.x, glyph.y + offset)
-        } else if let Some(glyph) = ui_text.cached_glyphs.last() {
-            (glyph.x + glyph.advance_width, glyph.y + offset)
-        } else {
-            (
-                transform.pixel_x + transform.pixel_width * ui_text.align.normalized_offset().0,
-                transform.pixel_y + transform.pixel_height * ui_text.align.normalized_offset().1,
-            )
-        }
+) {
+    glyph_data.cursor_position = if let Some(glyph) = ui_text.cached_glyphs.get(cursor_position) {
+        (glyph.x, glyph.y + offset)
+    } else if let Some(glyph) = ui_text.cached_glyphs.last() {
+        (glyph.x + glyph.advance_width, glyph.y + offset)
+    } else {
+        (
+            transform.pixel_x + transform.pixel_width * ui_text.align.normalized_offset().0,
+            transform.pixel_y + transform.pixel_height * ui_text.align.normalized_offset().1,
+        )
+    }
 }
 
 fn selected_bytes(text_editing: &TextEditing, text: &str) -> Option<Range<usize>> {
@@ -673,7 +675,9 @@ fn selected_bytes(text_editing: &TextEditing, text: &str) -> Option<Range<usize>
     let to_end = cmp::max(
         text_editing.cursor_position,
         text_editing.cursor_position + text_editing.highlight_vector,
-    ) as usize - start - 1;
+    ) as usize
+        - start
+        - 1;
 
     let mut indexes = text.grapheme_indices(true).map(|(i, _)| i);
     let start_byte = indexes.nth(start).unwrap_or(text.len());
@@ -688,7 +692,8 @@ fn selected_bytes(text_editing: &TextEditing, text: &str) -> Option<Range<usize>
 
 fn highlighted_glyphs_range(text_editing: &TextEditing, ui_text: &UiText) -> Range<usize> {
     let cursor_position = text_editing.cursor_position as usize;
-    let highlight_position = (text_editing.cursor_position + text_editing.highlight_vector) as usize;
+    let highlight_position =
+        (text_editing.cursor_position + text_editing.highlight_vector) as usize;
     let glyph_count = ui_text.cached_glyphs.len();
 
     let start = cursor_position.min(highlight_position).min(glyph_count);
@@ -705,7 +710,7 @@ fn password_sections(grapheme_count: usize) -> impl Iterator<Item = &'static str
     let full_chunks = grapheme_count / PASSWORD_STR_GRAPHEME_COUNT;
     let remaining_graphemes = grapheme_count % PASSWORD_STR_GRAPHEME_COUNT;
 
-    iter::repeat(PASSWORD_STR)
-        .take(full_chunks)
-        .chain(Some(&PASSWORD_STR[0..remaining_graphemes * PASSWORD_CHAR_GRAPHEME_BYTE_COUNT]))
+    iter::repeat(PASSWORD_STR).take(full_chunks).chain(Some(
+        &PASSWORD_STR[0..remaining_graphemes * PASSWORD_CHAR_GRAPHEME_BYTE_COUNT],
+    ))
 }

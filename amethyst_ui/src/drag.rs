@@ -1,15 +1,7 @@
 use crate::{
-    Parent, ScaleMode, UiEvent, UiEventType, UiTransform,
-    event,
-    sorted::SortedWidgets,
-    transform,
+    event, sorted::SortedWidgets, transform, Parent, ScaleMode, UiEvent, UiEventType, UiTransform,
 };
-use amethyst_core::{
-    Hidden, HiddenPropagate,
-    ecs::prelude::*,
-    math::Vector2,
-    shrev::EventChannel,
-};
+use amethyst_core::{ecs::prelude::*, math::Vector2, shrev::EventChannel, Hidden, HiddenPropagate};
 use amethyst_input::{BindingTypes, InputHandler};
 use amethyst_window::ScreenDimensions;
 use serde::{Deserialize, Serialize};
@@ -18,8 +10,12 @@ use std::collections::HashSet;
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct Draggable;
 
-pub fn build_drag_widget_system<T>(_world: &mut World, resources: &mut Resources) -> Box<dyn Schedulable>
-where T: BindingTypes
+pub fn build_drag_widget_system<T>(
+    _world: &mut World,
+    resources: &mut Resources,
+) -> Box<dyn Schedulable>
+where
+    T: BindingTypes,
 {
     let mut ui_reader_id = resources
         .get_mut::<EventChannel<UiEvent>>()
@@ -68,8 +64,8 @@ where T: BindingTypes
             }
 
             for &entity in dragged_targets.iter() {
-                if world.has_component::<Hidden>(entity) ||
-                    world.has_component::<HiddenPropagate>(entity)
+                if world.has_component::<Hidden>(entity)
+                    || world.has_component::<HiddenPropagate>(entity)
                 {
                     drag_stop_targets.insert(entity);
                 }
@@ -108,7 +104,7 @@ where T: BindingTypes
                                 transform.global_z,
                                 &sorted_widgets,
                                 world,
-                            )
+                            ),
                         },
                         entity,
                     ));

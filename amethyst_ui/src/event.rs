@@ -1,4 +1,4 @@
-use crate::{sorted::SortedWidgets, utils, UiTransform};
+use crate::{sorted::SortedWidgets, UiTransform};
 use amethyst_core::{ecs::prelude::*, math::Vector2, shrev::EventChannel};
 use amethyst_input::{BindingTypes, InputHandler};
 use amethyst_window::ScreenDimensions;

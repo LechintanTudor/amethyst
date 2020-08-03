@@ -1,5 +1,4 @@
 use amethyst_rendy::palette::Srgba;
-use amethyst_window::ScreenDimensions;
 
 pub fn srgba_to_lin_rgba_array(srgba: Srgba) -> [f32; 4] {
     let (r, g, b, a) = srgba.into_linear().into_components();

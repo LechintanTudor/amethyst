@@ -7,9 +7,12 @@ use amethyst_window::ScreenDimensions;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
+/// Enables drag and drop functionality when attached to an
+/// entity with a `UiTransform`.
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct Draggable;
 
+/// Builds a system which handles drag and drop functionality.
 pub fn build_drag_widget_system<T>(
     _world: &mut World,
     resources: &mut Resources,

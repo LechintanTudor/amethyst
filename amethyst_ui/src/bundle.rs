@@ -12,6 +12,9 @@ use amethyst_error::Error;
 use amethyst_input::{BindingTypes, InputEvent, InputHandler};
 use std::marker::PhantomData;
 
+/// Registers all resources and system necessary for an in-game UI.
+/// * `T` represents the `BindingTypes` used by `InputHandler`.
+/// * `G` represents the type used to distinguish between selection groups.
 #[derive(Default, Debug)]
 pub struct UiBundle<T, G = ()>
 where
@@ -26,6 +29,7 @@ where
     T: BindingTypes,
     G: Send + Sync + PartialEq + 'static,
 {
+    /// Creates a new `UiBundle`.
     pub fn new() -> Self {
         Self {
             _phantom: PhantomData,

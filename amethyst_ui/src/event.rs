@@ -5,33 +5,53 @@ use amethyst_window::ScreenDimensions;
 use std::collections::HashSet;
 use winit::MouseButton;
 
+/// Trait implemented by events which target a specific `Entity`
 pub trait TargetedEvent {
     fn target(&self) -> Entity;
 }
 
+/// The type of `UiEvent`
 #[derive(Clone, Debug, PartialEq)]
 pub enum UiEventType {
+    /// Click started and stopped on the same UI element
     Click,
+    /// Click started on a UI element
     ClickStart,
+    /// Click stopped on a UI element
     ClickStop,
+    /// Cursor started hovering above a UI element
     HoverStart,
+    /// Cursor stopped hovering above a UI element
     HoverStop,
+    /// Sent repeatedly when dragging a UI element
     Dragging {
+        /// Position of the cursor relative to the center of the `UiTransform`
+        /// when drag started
         offset_from_mouse: Vector2<f32>,
+        /// Absolute cursor position at the current time
         new_position: Vector2<f32>,
     },
+    /// Stopped dragging a UI element
     Dropped {
+        /// The entity with a `UiTransform` on which the UI element was dropped
         dropped_on: Option<Entity>,
     },
+    /// Value of a UI element was changed by user input
     ValueChange,
+    /// Value of a UI element was commited by user action
     ValueCommit,
+    /// UI element gained focus
     Focus,
+    /// UI element lost focus
     Blur,
 }
 
+/// Events that occur when the user interact with the UI
 #[derive(Clone, Debug)]
 pub struct UiEvent {
+    /// The type of event
     pub event_type: UiEventType,
+    /// The entity targeted by the event
     pub target: Entity,
 }
 
@@ -42,11 +62,13 @@ impl TargetedEvent for UiEvent {
 }
 
 impl UiEvent {
+    /// Creates a new `UiEvent`.
     pub fn new(event_type: UiEventType, target: Entity) -> Self {
         Self { event_type, target }
     }
 }
 
+/// Builds a system which enables mouse interaction with the UI.
 pub fn build_ui_mouse_system<T>(
     _world: &mut World,
     _resources: &mut Resources,
@@ -109,6 +131,7 @@ where
         })
 }
 
+/// Returns the entities targeted by the cursor.
 pub fn get_targeted<E>(
     (mouse_x, mouse_y): (f32, f32),
     sorted_widgets: &SortedWidgets,
@@ -135,6 +158,7 @@ where
     entities
 }
 
+/// Returns the entities target by the cursor below a Z value.
 pub fn get_targeted_below<E>(
     (mouse_x, mouse_y): (f32, f32),
     below_global_z: f32,
@@ -162,6 +186,7 @@ where
     None
 }
 
+/// Returns the mouse position in UI world coordinates.
 pub fn mouse_world_position(
     (mouse_x, mouse_y): (f32, f32),
     screen_dimensions: &ScreenDimensions,

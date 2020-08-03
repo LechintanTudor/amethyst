@@ -24,7 +24,7 @@ impl SelectedEntities {
     pub fn remove(&mut self, entity: Entity) {
         self.entities.remove(&entity);
 
-        if matches!(self.last, Some(entity)) {
+        if self.last == Some(entity) {
             self.last = self.entities.iter().next().cloned();
         }
     }
@@ -79,7 +79,7 @@ where
                 | input.key_is_down(VirtualKeyCode::RControl);
 
             for event in ui_events.read(&mut ui_event_reader) {
-                if matches!(event.event_type, UiEventType::ClickStart) {
+                if event.event_type == UiEventType::ClickStart {
                     let entity = event.target;
 
                     let selectable = match world.get_component::<Selectable<G>>(entity) {

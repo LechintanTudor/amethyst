@@ -21,11 +21,11 @@ impl SortedWidgets {
 
 pub fn build_ui_sorting_system(_: &mut World, _: &mut Resources) -> Box<dyn Schedulable> {
     SystemBuilder::<()>::new("UiSortingSystem")
-        .write_resource::<SortedWidgets>()
         .with_query(
             Read::<UiTransform>::query()
                 .filter(!component::<Hidden>() & !component::<HiddenPropagate>()),
         )
+        .write_resource::<SortedWidgets>()
         .build(|_, world, sorted, query| {
             sorted.widgets.clear();
             sorted

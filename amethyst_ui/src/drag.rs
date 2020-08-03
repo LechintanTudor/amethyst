@@ -18,8 +18,8 @@ where
     T: BindingTypes,
 {
     let mut ui_reader_id = resources
-        .get_mut::<EventChannel<UiEvent>>()
-        .expect("`EventChannel<UiEvent>` was not found in resources")
+        .get_mut_or_default::<EventChannel<UiEvent>>()
+        .unwrap()
         .register_reader();
 
     let mut start_mouse_position = Vector2::<f32>::new(0.0, 0.0);

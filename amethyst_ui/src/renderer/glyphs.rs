@@ -1,6 +1,7 @@
 use crate::{
     renderer::{utils, UiArgs},
     text::CachedGlyph,
+    text_editing,
     FontAsset, LineMode, TextEditing, UiText, UiTransform,
 };
 use amethyst_assets::{AssetStorage, Handle};
@@ -20,7 +21,7 @@ use glyph_brush::{
     ab_glyph::{Font, FontArc, PxScale, ScaleFont},
     *,
 };
-use std::{cmp, collections::HashMap, iter, mem, ops::Range};
+use std::{collections::HashMap, iter, mem, ops::Range};
 use unicode_segmentation::UnicodeSegmentation;
 
 const INITIAL_CACHE_SIZE: (u32, u32) = (512, 512);
@@ -40,7 +41,6 @@ impl UiGlyphsResource {
 struct ExtraTextData {
     // Entity to which the text belongs
     entity: Entity,
-
     // Text color stored as linear RGBA
     color: [u32; 4],
 }
@@ -108,11 +108,6 @@ where
     let mut font_map = HashMap::<u32, FontId>::new();
 
     SystemBuilder::<()>::new("UiGlyphsSystem")
-        .write_resource::<Factory<B>>()
-        .read_resource::<QueueId>()
-        .write_resource::<AssetStorage<Texture>>()
-        .read_resource::<AssetStorage<FontAsset>>()
-        .write_resource::<UiGlyphsResource>()
         .with_query(
             <(
                 Read<UiTransform>,
@@ -142,9 +137,14 @@ where
             )>::query()
             .filter(!component::<Hidden>() & !component::<HiddenPropagate>()),
         )
+        .read_resource::<QueueId>()
+        .read_resource::<AssetStorage<FontAsset>>()
+        .write_resource::<Factory<B>>()
+        .write_resource::<AssetStorage<Texture>>()
+        .write_resource::<UiGlyphsResource>()
         .write_component::<UiGlyphs>()
         .build(move |commands, world, resources, queries| {
-            let (factory, queue, texture_storage, font_storage, glyphs_res) = resources;
+            let (queue, font_storage, factory, texture_storage, glyphs_res) = resources;
             let (text_query, glyph_clear_query, glyph_draw_query, glyph_redraw_query) = queries;
 
             let glyph_texture_handle = glyphs_res.glyph_texture.get_or_insert_with(|| {
@@ -152,10 +152,11 @@ where
                 texture_storage.insert(create_glyph_texture(factory, **queue, width, height))
             });
 
+            // Unwrap won't fail because texture is created synchronously
             let mut glyph_texture = texture_storage
                 .get(glyph_texture_handle)
                 .and_then(B::unwrap_texture)
-                .expect("Glyph texture is created synchronously");
+                .unwrap();
 
             for (entity, (transform, mut ui_text, tint, text_editing)) in
                 text_query.iter_entities_mut(world)
@@ -176,11 +177,9 @@ where
                     None => continue,
                 };
 
-                let tint_color = if let Some(tint) = tint {
-                    utils::srgba_to_lin_rgba_array(tint.0)
-                } else {
-                    [1.0, 1.0, 1.0, 1.0]
-                };
+                let tint_color = tint
+                    .map(|t| utils::srgba_to_lin_rgba_array(t.0))
+                    .unwrap_or([1.0, 1.0, 1.0, 1.0]);
 
                 let base_color = utils::mul_blend_lin_rgba_arrays(
                     utils::srgba_to_lin_rgba_array(ui_text.color),
@@ -205,7 +204,7 @@ where
 
                         if let Some(range) = selected_bytes(&text_editing, &ui_text.text) {
                             let start = range.start;
-                            let end = range.end;
+                            let end  = range.end;
 
                             vec![
                                 Text {
@@ -667,17 +666,13 @@ fn selected_bytes(text_editing: &TextEditing, text: &str) -> Option<Range<usize>
         return None;
     }
 
-    let start = cmp::min(
-        text_editing.cursor_position,
+    let start = text_editing.cursor_position.min(
         text_editing.cursor_position + text_editing.highlight_vector,
     ) as usize;
 
-    let to_end = cmp::max(
-        text_editing.cursor_position,
+    let to_end = text_editing.cursor_position.max(
         text_editing.cursor_position + text_editing.highlight_vector,
-    ) as usize
-        - start
-        - 1;
+    ) as usize - start - 1;
 
     let mut indexes = text.grapheme_indices(true).map(|(i, _)| i);
     let start_byte = indexes.nth(start).unwrap_or(text.len());

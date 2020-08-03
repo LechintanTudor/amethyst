@@ -94,8 +94,11 @@ pub fn build_ui_transform_system(
     let mut solved_transforms = BitSet::new();
 
     SystemBuilder::<()>::new("UiTransformSystem")
+        .with_query(
+           TryRead::<Parent>::query()
+                .filter(component::<UiTransform>())
+        )
         .read_resource::<ScreenDimensions>()
-        .with_query(<(TryRead<Parent>,)>::query().filter(component::<UiTransform>()))
         .read_component::<Parent>()
         .write_component::<UiTransform>()
         .build(move |_, world, resources, query| {

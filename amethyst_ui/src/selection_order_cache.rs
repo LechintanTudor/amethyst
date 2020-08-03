@@ -8,16 +8,16 @@ pub struct SelectionOrderCache {
 }
 
 pub fn build_selection_order_cache_system<G>(
-    _: &mut World,
-    _: &mut Resources,
+    _world: &mut World,
+    _resources: &mut Resources,
 ) -> Box<dyn Schedulable>
 where
     G: Send + Sync + PartialEq + 'static,
 {
     SystemBuilder::<()>::new("SelectionOrderCacheSystem")
-        .write_resource::<SelectionOrderCache>()
         .with_query(TryRead::<Selectable<G>>::query().filter(changed::<Selectable<G>>()))
         .with_query(Read::<Selectable<G>>::query())
+        .write_resource::<SelectionOrderCache>()
         .build(|_, world, selection_cache, queries| {
             // Cache was invalidated
             if queries.0.iter(world).next().is_some() {

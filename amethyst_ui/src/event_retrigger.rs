@@ -37,7 +37,7 @@ where
 }
 
 pub fn build_event_retrigger_system<T>(
-    _: &mut World,
+    _world: &mut World,
     resources: &mut Resources,
 ) -> Box<dyn Schedulable>
 where

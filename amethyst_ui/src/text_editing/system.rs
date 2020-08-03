@@ -10,12 +10,12 @@ use unicode_segmentation::UnicodeSegmentation;
 use winit::{ElementState, Event, KeyboardInput, ModifiersState, VirtualKeyCode, WindowEvent};
 
 pub fn build_text_editing_input_system(
-    _: &mut World,
+    _world: &mut World,
     resources: &mut Resources,
 ) -> Box<dyn Schedulable> {
     let mut winit_reader_id = resources
-        .get_mut::<EventChannel<Event>>()
-        .expect("`EventChannel<Event>` was not found in resources")
+        .get_mut_or_default::<EventChannel<Event>>()
+        .unwrap()
         .register_reader();
 
     let mut clipboard = ClipboardContext::new().expect("Failed to create clipboard context");

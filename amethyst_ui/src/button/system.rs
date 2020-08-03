@@ -64,7 +64,7 @@ pub fn build_ui_button_system(
         .write_component::<UiText>()
         .build(move |_, world, actions, _| {
             for action in actions.read(&mut action_reader) {
-                match action.kind {
+                match action.event_type {
                     UiButtonActionType::SetTextColor(color) => {
                         if let Some(mut text) = world.get_component_mut::<UiText>(action.target) {
                             text_color_map

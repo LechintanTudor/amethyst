@@ -58,12 +58,14 @@ lazy_static::lazy_static! {
     ).unwrap();
 }
 
+/// Render plugin for rendering UI elements
 #[derive(Default, Debug)]
 pub struct RenderUi {
     target: Target,
 }
 
 impl RenderUi {
+    /// Sets the render target on which to render UI
     pub fn with_target(mut self, target: Target) -> Self {
         self.target = target;
         self
@@ -92,7 +94,7 @@ where
         _resources: &Resources,
     ) -> Result<(), Error> {
         plan.extend_target(self.target, |ctx| {
-            ctx.add(RenderOrder::Overlay, DrawUiDesc::new().builder())?;
+            ctx.add(RenderOrder::Overlay, DrawUiDesc::default().builder())?;
             Ok(())
         });
         Ok(())
@@ -100,13 +102,7 @@ where
 }
 
 #[derive(Clone, Default, Debug)]
-pub struct DrawUiDesc;
-
-impl DrawUiDesc {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
+struct DrawUiDesc;
 
 impl<B> RenderGroupDesc<B, GraphAuxData> for DrawUiDesc
 where
@@ -194,7 +190,7 @@ struct UiViewArgs {
 }
 
 #[derive(Debug)]
-pub struct DrawUi<B>
+struct DrawUi<B>
 where
     B: Backend,
 {
@@ -267,10 +263,12 @@ where
 
         for &(entity, _) in aux.resources.get::<SortedWidgets>().unwrap().widgets() {
             let transform = aux.world.get_component::<UiTransform>(entity).unwrap();
+
             let tint = aux
                 .world
                 .get_component::<Tint>(entity)
-                .map(|t| t.as_ref().clone());
+                .map(|t| utils::srgba_to_lin_rgba_array(t.0))
+                .unwrap_or([1.0, 1.0, 1.0, 1.0]);
 
             if let Some(image) = aux.world.get_component::<UiImage>(entity) {
                 changed |= render_image(
@@ -465,7 +463,7 @@ fn render_image<B>(
     factory: &Factory<B>,
     transform: &UiTransform,
     image: &UiImage,
-    tint: Option<Tint>,
+    tint: [f32; 4],
     white_texture_id: TextureId,
     textures: &mut TextureSub<B>,
     batches: &mut OrderedOneLevelBatch<TextureId, UiArgs>,
@@ -474,7 +472,7 @@ fn render_image<B>(
 where
     B: Backend,
 {
-    let color = utils::mul_blend_lin_rgba_arrays(image_color(image), tint_color(tint));
+    let color = utils::mul_blend_lin_rgba_arrays(image_color(image), tint);
 
     match image {
         UiImage::Texture(texture) => {
@@ -579,20 +577,8 @@ where
 fn image_color(image: &UiImage) -> [f32; 4] {
     match image {
         UiImage::SolidColor(color) => {
-            let (r, g, b, a) = color.into_linear().into_components();
-            [r, g, b, a]
+            utils::srgba_to_lin_rgba_array(*color)
         }
         _ => [1.0, 1.0, 1.0, 1.0],
-    }
-}
-
-// Returns the `Tint` color as linear RGBA array
-fn tint_color(tint: Option<Tint>) -> [f32; 4] {
-    match tint {
-        Some(Tint(color)) => {
-            let (r, g, b, a) = color.into_linear().into_components();
-            [r, g, b, a]
-        }
-        None => [1.0, 1.0, 1.0, 1.0],
     }
 }

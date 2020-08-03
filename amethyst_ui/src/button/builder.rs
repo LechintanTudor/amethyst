@@ -14,9 +14,13 @@ const DEFAULT_FONT_SIZE: f32 = 32.0;
 const DEFAULT_TEXT_COLOR: (f32, f32, f32, f32) = (0.0, 0.0, 0.0, 1.0);
 const DEFAULT_BACKGROUND_COLOR: (f32, f32, f32, f32) = (0.8, 0.8, 0.8, 1.0);
 
+/// Trait implemented by types which support creating entities
+/// and adding components to them
 pub trait UiButtonBuilderTarget {
+    /// Creates a new entity.
     fn create_entity(&mut self) -> Entity;
 
+    /// Adds a component to an existing entity.
     fn add_component<C>(&mut self, entity: Entity, component: C)
     where
         C: Component;
@@ -48,6 +52,7 @@ impl UiButtonBuilderTarget for CommandBuffer {
     }
 }
 
+/// Convenience structure for building a `UiButton`
 #[derive(Clone, Debug)]
 pub struct UiButtonBuilder {
     x: f32,
@@ -96,38 +101,50 @@ impl Default for UiButtonBuilder {
 }
 
 impl UiButtonBuilder {
+    /// Sets the position of the button.
     pub fn with_position(mut self, x: f32, y: f32) -> Self {
         self.x = x;
         self.y = y;
         self
     }
 
+    /// Sets the layer of the button. Widgets with higher Z values
+    /// get rendered above widgets with lower Z values.
     pub fn with_layer(mut self, z: f32) -> Self {
         self.z = z;
         self
     }
 
+    /// Sets the size of the button.
     pub fn with_size(mut self, width: f32, height: f32) -> Self {
         self.width = width;
         self.height = height;
         self
     }
 
+    /// Sets the anchor of the button. The anchor is the origin
+    /// of the coordinate system on the parent of the button
+    /// or the screen if no parent was provided.
     pub fn with_anchor(mut self, anchor: Anchor) -> Self {
         self.anchor = anchor;
         self
     }
 
+    /// Sets the pivot of the button. The pivot is the point on
+    /// the widget that is pinned to the provided position.
     pub fn with_pivot(mut self, pivot: Anchor) -> Self {
         self.pivot = pivot;
         self
     }
 
+    /// Sets the way the button stretches relative to its parent
+    /// or screen if no parent was provided
     pub fn with_stretch(mut self, stretch: Stretch) -> Self {
         self.stretch = stretch;
         self
     }
 
+    /// Sets the text of the button.
     pub fn with_text<S>(mut self, text: S) -> Self
     where
         S: ToString,
@@ -136,11 +153,13 @@ impl UiButtonBuilder {
         self
     }
 
+    /// Sets the text color of the button.
     pub fn with_text_color(mut self, text_color: Srgba) -> Self {
         self.text_color = text_color;
         self
     }
 
+    /// Sets the text color of the button when the button is hovered.
     pub fn with_hover_text_color(mut self, text_color: Srgba) -> Self {
         self.on_hover_start
             .push(UiButtonActionType::SetTextColor(text_color));
@@ -149,6 +168,7 @@ impl UiButtonBuilder {
         self
     }
 
+    /// Sets the text color of the button when the button is pressed.
     pub fn with_press_text_color(mut self, text_color: Srgba) -> Self {
         self.on_click_start
             .push(UiButtonActionType::SetTextColor(text_color));
@@ -157,21 +177,26 @@ impl UiButtonBuilder {
         self
     }
 
+    /// Sets the font of the button.
     pub fn with_font(mut self, font: Handle<FontAsset>) -> Self {
         self.font = Some(font);
         self
     }
 
+    /// Sets the font size of the button.
     pub fn with_font_size(mut self, font_size: f32) -> Self {
         self.font_size = font_size;
         self
     }
 
+    /// Sets a `UiImage` to be displayed as a background.
     pub fn with_image(mut self, image: UiImage) -> Self {
         self.image = image;
         self
     }
 
+    /// Sets a `UiImage` to to be displayed as a background when the
+    /// button is hovered.
     pub fn with_hover_image(mut self, image: UiImage) -> Self {
         self.on_hover_start
             .push(UiButtonActionType::SetImage(image.clone()));
@@ -180,6 +205,8 @@ impl UiButtonBuilder {
         self
     }
 
+    /// Sets a `UiImage` to to be displayed as a background when the
+    /// button is pressed.
     pub fn with_press_image(mut self, image: UiImage) -> Self {
         self.on_click_start
             .push(UiButtonActionType::SetImage(image.clone()));
@@ -188,11 +215,13 @@ impl UiButtonBuilder {
         self
     }
 
+    /// Sets the parent of the button.
     pub fn with_parent(mut self, parent: Entity) -> Self {
         self.parent = Some(parent);
         self
     }
 
+    /// Builds the button.
     pub fn build<T>(self, target: &mut T) -> UiButton
     where
         T: UiButtonBuilderTarget,
@@ -254,6 +283,6 @@ where
     I: Iterator<Item = UiButtonActionType>,
 {
     actions
-        .map(|action| UiButtonAction::new(target, action))
+        .map(|action| UiButtonAction::new(action, target))
         .collect()
 }

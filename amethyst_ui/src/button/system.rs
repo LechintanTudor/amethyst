@@ -46,6 +46,7 @@ where
     }
 }
 
+/// Builds a system that changes the appearance of `UiButton`s
 pub fn build_ui_button_system(
     _world: &mut World,
     resources: &mut Resources,

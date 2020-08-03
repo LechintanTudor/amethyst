@@ -26,12 +26,15 @@ use unicode_segmentation::UnicodeSegmentation;
 
 const INITIAL_CACHE_SIZE: (u32, u32) = (512, 512);
 
+/// Resource which holds a handle to the texture to which
+/// glyphs are rendered
 #[derive(Default, Debug)]
 pub struct UiGlyphsResource {
     glyph_texture: Option<Handle<Texture>>,
 }
 
 impl UiGlyphsResource {
+    /// Returns a handle to the texture to which glyphs are rendered.
     pub fn glyph_texture(&self) -> Option<&Handle<Texture>> {
         self.glyph_texture.as_ref()
     }
@@ -39,9 +42,7 @@ impl UiGlyphsResource {
 
 #[derive(Copy, Clone, Debug, PartialEq, Hash)]
 struct ExtraTextData {
-    // Entity to which the text belongs
     entity: Entity,
-    // Text color stored as linear RGBA
     color: [u32; 4],
 }
 
@@ -69,12 +70,12 @@ impl ExtraTextData {
 }
 
 #[derive(Clone, Default, Debug)]
-pub struct UiGlyphs {
-    pub(crate) vertices: Vec<UiArgs>,
-    pub(crate) selection_vertices: Vec<UiArgs>,
-    pub(crate) cursor_position: (f32, f32),
-    pub(crate) height: f32,
-    pub(crate) space_width: f32,
+pub(crate) struct UiGlyphs {
+    pub vertices: Vec<UiArgs>,
+    pub selection_vertices: Vec<UiArgs>,
+    pub cursor_position: (f32, f32),
+    pub height: f32,
+    pub space_width: f32,
 }
 
 #[derive(Copy, Clone, Debug, Hash)]
@@ -92,6 +93,7 @@ impl LineBreaker for CustomLineBreaker {
     }
 }
 
+/// Builds a system which handles text layout and rasterization.
 pub fn build_ui_glyphs_system<B>(
     _world: &mut World,
     _resources: &mut Resources,
@@ -514,8 +516,8 @@ where
 
                                 let color = if let Some(tint) = tint {
                                     utils::mul_blend_srgba_to_lin_rgba_array(
-                                        &text_editing.selected_background_color,
-                                        &tint.0,
+                                        text_editing.selected_background_color,
+                                        tint.0,
                                     )
                                 } else {
                                     utils::srgba_to_lin_rgba_array(

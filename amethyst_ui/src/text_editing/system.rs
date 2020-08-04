@@ -9,8 +9,7 @@ use unicode_normalization::{char::is_combining_mark, UnicodeNormalization};
 use unicode_segmentation::UnicodeSegmentation;
 use winit::{ElementState, Event, KeyboardInput, ModifiersState, VirtualKeyCode, WindowEvent};
 
-/// Builds a system which handles text editing and clipboard functionality.
-pub fn build_text_editing_input_system(
+pub(crate) fn build_text_editing_input_system(
     _world: &mut World,
     resources: &mut Resources,
 ) -> Box<dyn Schedulable> {

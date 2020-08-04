@@ -3,9 +3,12 @@ use amethyst_assets::AssetStorage;
 use amethyst_audio::{output::Output, Source, SourceHandle};
 use amethyst_core::{ecs::prelude::*, shrev::EventChannel};
 
+/// Triggers sounds to play in the UI sound system.
 #[derive(Clone, Debug)]
 pub struct UiPlaySoundAction(pub SourceHandle);
 
+/// Enables sound playback for certain user interactions
+/// when attached to an entity with a `UiTransform`
 #[derive(Clone, Debug)]
 pub struct UiSoundRetrigger {
     pub on_click_start: Option<UiPlaySoundAction>,
@@ -36,7 +39,11 @@ impl EventRetrigger for UiSoundRetrigger {
     }
 }
 
-pub fn build_ui_sound_system(_: &mut World, resources: &mut Resources) -> Box<dyn Schedulable> {
+#[allow(dead_code)]
+pub(crate) fn build_ui_sound_system(
+    _: &mut World,
+    resources: &mut Resources,
+) -> Box<dyn Schedulable> {
     let mut play_sound_action_reader = resources
         .get_mut_or_default::<EventChannel<UiPlaySoundAction>>()
         .unwrap()

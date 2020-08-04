@@ -7,26 +7,43 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "profiler")]
 use thread_profiler::profile_scope;
 
+/// Indicates if the position and margins should be calculated in pixels
+/// or relative to their parent.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ScaleMode {
+    /// Use pixels.
     Pixel,
-    Percent,
+    /// Use a ratio of the parent's dimensions.
+    Ratio,
 }
 
+/// Indicates which point on the parent should be considered the origin (0, 0).
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Anchor {
+    /// The origin is in the top left of the parent.
     TopLeft,
+    /// The origin is in the top middle of the parent.
     TopMiddle,
+    /// The origin is in the top right of the parent.
     TopRight,
+    /// The origin is in the middle left of the parent.
     MiddleLeft,
+    /// The origin is in the middle of the parent.
     Middle,
+    /// The origin is in the middle right of the parent.
     MiddleRight,
+    /// The origin is in the bottom left of the parent.
     BottomLeft,
+    /// The origin is in the middle bottom of the parent.
     BottomMiddle,
+    /// The origin is in the bottom right of the parent.
     BottomRight,
 }
 
 impl Anchor {
+    /// Returns the normalized offset of the `Anchor`.
+    /// The normalized offset is a [-0.5, 0.5] value indicating the
+    /// relative offset multiplier from the center of the parent.
     pub fn normalized_offset(self) -> (f32, f32) {
         match self {
             Anchor::TopLeft => (-0.5, 0.5),
@@ -70,23 +87,33 @@ impl Anchor {
     }
 }
 
+/// Indicates how a UI element should stretch to match the parent's dimensions.
 #[derive(Copy, Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Stretch {
+    /// No stretching occurs.
     NoStretch,
+    /// Stretch on the X axis.
     X {
+        /// The width of the margin
         x_margin: f32,
     },
+    /// Stretch on the Y axis.
     Y {
+        /// The height of the margin
         y_margin: f32,
     },
+    /// Stretch on both X and Y axes.
     XY {
+        /// The width of the margin
         x_margin: f32,
+        /// The height of the margin
         y_margin: f32,
+        /// Whether to keep the aspect ratio by adding more margin to one axis when necessary
         keep_aspect_ratio: bool,
     },
 }
 
-pub fn build_ui_transform_system(
+pub(crate) fn build_ui_transform_system(
     _world: &mut World,
     _resources: &mut Resources,
 ) -> Box<dyn Schedulable> {
@@ -94,10 +121,7 @@ pub fn build_ui_transform_system(
     let mut solved_transforms = BitSet::new();
 
     SystemBuilder::<()>::new("UiTransformSystem")
-        .with_query(
-           TryRead::<Parent>::query()
-                .filter(component::<UiTransform>())
-        )
+        .with_query(TryRead::<Parent>::query().filter(component::<UiTransform>()))
         .read_resource::<ScreenDimensions>()
         .read_component::<Parent>()
         .write_component::<UiTransform>()
@@ -224,7 +248,7 @@ fn modify_transform_bounds(
             transform.pixel_width = transform.width;
             transform.pixel_height = transform.height;
         }
-        ScaleMode::Percent => {
+        ScaleMode::Ratio => {
             transform.pixel_x += transform.local_x * parent_pixel_width;
             transform.pixel_y += transform.local_y * parent_pixel_height;
             transform.pixel_width = transform.width * parent_pixel_width;

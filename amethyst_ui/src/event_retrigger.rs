@@ -5,9 +5,11 @@ use amethyst_core::{
 };
 use std::ops::DerefMut;
 
+/// Trait implemented by types which can receive events
 pub trait EventReceiver<T> {
+    /// Receive a single event
     fn receive_one(&mut self, value: &T);
-
+    /// Receive a slice of events
     fn receive(&mut self, values: &[T]);
 }
 
@@ -24,19 +26,23 @@ where
     }
 }
 
+/// Trait that denotes which event gets retriggered to which other event and how
 pub trait EventRetrigger
 where
     Self: Component,
 {
+    /// The type of event that causes the retrigger
     type In: Send + Sync + Clone + TargetedEvent;
+    /// The type of event that gets retriggered
     type Out: Send + Sync + Clone;
 
+    /// Describes how `In` events retrigger `Out` events.
     fn apply<R>(&self, event: &Self::In, receiver: &mut R)
     where
         R: EventReceiver<Self::Out>;
 }
 
-pub fn build_event_retrigger_system<T>(
+pub(crate) fn build_event_retrigger_system<T>(
     _world: &mut World,
     resources: &mut Resources,
 ) -> Box<dyn Schedulable>

@@ -1,25 +1,28 @@
 use crate::UiTransform;
 use amethyst_core::{ecs::prelude::*, Hidden, HiddenPropagate};
 
-// Sorts visible widgets from farthest to closest
+// Maintains a cache of sorted widgets and their Z position.
 #[derive(Clone, Debug)]
 pub struct SortedWidgets {
     widgets: Vec<(Entity, f32)>,
 }
 
 impl SortedWidgets {
+    /// Creates a new `SortedWidgets` instance.
     pub fn new() -> Self {
         Self {
             widgets: Vec::new(),
         }
     }
 
+    /// Returns a slice of tuples where the first element is the entity
+    /// which represents the UI element and the second is its Z position.
     pub fn widgets(&self) -> &[(Entity, f32)] {
         &self.widgets
     }
 }
 
-pub fn build_ui_sorting_system(_: &mut World, _: &mut Resources) -> Box<dyn Schedulable> {
+pub(crate) fn build_ui_sorting_system(_: &mut World, _: &mut Resources) -> Box<dyn Schedulable> {
     SystemBuilder::<()>::new("UiSortingSystem")
         .with_query(
             Read::<UiTransform>::query()

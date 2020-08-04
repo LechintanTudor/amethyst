@@ -2,12 +2,21 @@ use crate::Selectable;
 use amethyst_core::ecs::prelude::*;
 use std::cmp::Ordering;
 
+/// Maintains a cache of selectable entities and their tab order.
 #[derive(Clone, Default, Debug)]
 pub struct SelectionOrderCache {
-    pub cache: Vec<(u32, Entity)>,
+    cache: Vec<(Entity, u32)>,
 }
 
-pub fn build_selection_order_cache_system<G>(
+impl SelectionOrderCache {
+    /// Returns a slice of tuples where the first element is the entity
+    /// which represents the UI element and the second is the tab order
+    pub fn entitites(&self) -> &[(Entity, u32)] {
+        &self.cache
+    }
+}
+
+pub(crate) fn build_selection_order_cache_system<G>(
     _world: &mut World,
     _resources: &mut Resources,
 ) -> Box<dyn Schedulable>
@@ -19,18 +28,15 @@ where
         .with_query(Read::<Selectable<G>>::query())
         .write_resource::<SelectionOrderCache>()
         .build(|_, world, selection_cache, queries| {
-            // Cache was invalidated
-            if queries.0.iter(world).next().is_some() {
-                selection_cache.cache.clear();
-                selection_cache
-                    .cache
-                    .extend(queries.1.iter_entities(world).map(|(e, s)| (s.order, e)));
-                selection_cache
-                    .cache
-                    .sort_by(|(o1, e1), (o2, e2)| match o1.cmp(o2) {
-                        Ordering::Equal => e1.index().cmp(&e2.index()),
-                        ordering => ordering,
-                    });
-            }
+            selection_cache.cache.clear();
+            selection_cache
+                .cache
+                .extend(queries.1.iter_entities(world).map(|(e, s)| (e, s.order)));
+            selection_cache
+                .cache
+                .sort_by(|(e1, o1), (e2, o2)| match o1.cmp(o2) {
+                    Ordering::Equal => e1.index().cmp(&e2.index()),
+                    ordering => ordering,
+                });
         })
 }

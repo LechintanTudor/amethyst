@@ -12,8 +12,7 @@ use std::collections::HashSet;
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct Draggable;
 
-/// Builds a system which handles drag and drop functionality.
-pub fn build_drag_widget_system<T>(
+pub(crate) fn build_drag_widget_system<T>(
     _world: &mut World,
     resources: &mut Resources,
 ) -> Box<dyn Schedulable>
@@ -88,7 +87,7 @@ where
                 if let Some(mut transform) = world.get_component_mut::<UiTransform>(entity) {
                     let (scale_x, scale_y) = match transform.scale_mode {
                         ScaleMode::Pixel => (1.0, 1.0),
-                        ScaleMode::Percent => (parent_width, parent_height),
+                        ScaleMode::Ratio => (parent_width, parent_height),
                     };
 
                     transform.local_x += change.x / scale_x;

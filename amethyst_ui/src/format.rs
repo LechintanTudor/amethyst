@@ -4,6 +4,7 @@ use amethyst_error::{format_err, Error, ResultExt};
 use glyph_brush::ab_glyph::FontArc;
 use serde::{Deserialize, Serialize};
 
+/// A loaded font
 #[derive(Clone)]
 pub struct FontAsset(pub FontArc);
 
@@ -23,6 +24,7 @@ pub struct FontData(FontArc);
 
 amethyst_assets::register_format_type!(FontData);
 
+/// Supports loading `TrueType` and `OpenType` fonts.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TtfFormat;
 
@@ -40,7 +42,7 @@ impl Format<FontData> for TtfFormat {
     }
 }
 
-pub fn build_font_asset_processor_system(
+pub(crate) fn build_font_asset_processor_system(
     world: &mut World,
     resources: &mut Resources,
 ) -> Box<dyn Schedulable> {

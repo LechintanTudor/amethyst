@@ -68,8 +68,7 @@ impl UiEvent {
     }
 }
 
-/// Builds a system which enables mouse interaction with the UI.
-pub fn build_ui_mouse_system<T>(
+pub(crate) fn build_ui_mouse_system<T>(
     _world: &mut World,
     _resources: &mut Resources,
 ) -> Box<dyn Schedulable>

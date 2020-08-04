@@ -1,7 +1,6 @@
 use crate::{
     renderer::{utils, UiArgs},
     text::CachedGlyph,
-    text_editing,
     FontAsset, LineMode, TextEditing, UiText, UiTransform,
 };
 use amethyst_assets::{AssetStorage, Handle};
@@ -93,8 +92,7 @@ impl LineBreaker for CustomLineBreaker {
     }
 }
 
-/// Builds a system which handles text layout and rasterization.
-pub fn build_ui_glyphs_system<B>(
+pub(crate) fn build_ui_glyphs_system<B>(
     _world: &mut World,
     _resources: &mut Resources,
 ) -> Box<dyn Schedulable>
@@ -206,7 +204,7 @@ where
 
                         if let Some(range) = selected_bytes(&text_editing, &ui_text.text) {
                             let start = range.start;
-                            let end  = range.end;
+                            let end = range.end;
 
                             vec![
                                 Text {
@@ -668,13 +666,16 @@ fn selected_bytes(text_editing: &TextEditing, text: &str) -> Option<Range<usize>
         return None;
     }
 
-    let start = text_editing.cursor_position.min(
-        text_editing.cursor_position + text_editing.highlight_vector,
-    ) as usize;
+    let start = text_editing
+        .cursor_position
+        .min(text_editing.cursor_position + text_editing.highlight_vector) as usize;
 
-    let to_end = text_editing.cursor_position.max(
-        text_editing.cursor_position + text_editing.highlight_vector,
-    ) as usize - start - 1;
+    let to_end = text_editing
+        .cursor_position
+        .max(text_editing.cursor_position + text_editing.highlight_vector)
+        as usize
+        - start
+        - 1;
 
     let mut indexes = text.grapheme_indices(true).map(|(i, _)| i);
     let start_byte = indexes.nth(start).unwrap_or(text.len());

@@ -37,10 +37,10 @@ impl UiTransform {
         height: f32,
     ) -> Self
     where
-        S: ToString,
+        S: Into<String>,
     {
         Self {
-            id: id.to_string(),
+            id: id.into(),
             anchor,
             pivot,
             stretch: Stretch::NoStretch,
@@ -75,7 +75,7 @@ impl UiTransform {
     }
 
     pub fn into_percent(mut self) -> Self {
-        self.scale_mode = ScaleMode::Percent;
+        self.scale_mode = ScaleMode::Ratio;
         self
     }
 
@@ -133,16 +133,8 @@ mod tests {
 
     #[test]
     fn inside_local() {
-        let transform = UiTransform::new(
-            "".to_string(),
-            Anchor::TopLeft,
-            Anchor::Middle,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            1.0,
-        );
+        let transform =
+            UiTransform::new("", Anchor::TopLeft, Anchor::Middle, 0.0, 0.0, 0.0, 1.0, 1.0);
 
         assert!(transform.position_inside_local(-0.49, 0.20));
         assert!(!transform.position_inside_local(-1.49, 1.20));
@@ -150,16 +142,8 @@ mod tests {
 
     #[test]
     fn inside_global() {
-        let transform = UiTransform::new(
-            "".to_string(),
-            Anchor::TopLeft,
-            Anchor::Middle,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            1.0,
-        );
+        let transform =
+            UiTransform::new("", Anchor::TopLeft, Anchor::Middle, 0.0, 0.0, 0.0, 1.0, 1.0);
 
         assert!(transform.position_inside(-0.49, 0.20));
         assert!(!transform.position_inside(-1.49, 1.20));

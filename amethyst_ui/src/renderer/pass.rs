@@ -576,9 +576,7 @@ where
 // Returns the `UiImage` color as linear RGBA array
 fn image_color(image: &UiImage) -> [f32; 4] {
     match image {
-        UiImage::SolidColor(color) => {
-            utils::srgba_to_lin_rgba_array(*color)
-        }
+        UiImage::SolidColor(color) => utils::srgba_to_lin_rgba_array(*color),
         _ => [1.0, 1.0, 1.0, 1.0],
     }
 }

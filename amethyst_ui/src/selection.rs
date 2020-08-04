@@ -4,6 +4,7 @@ use amethyst_input::{BindingTypes, InputHandler};
 use std::collections::HashSet;
 use winit::VirtualKeyCode;
 
+/// Keeps track of selected entities.
 #[derive(Clone, Default, Debug)]
 pub struct SelectedEntities {
     entities: HashSet<Entity>,
@@ -11,16 +12,19 @@ pub struct SelectedEntities {
 }
 
 impl SelectedEntities {
+    /// Unselect all entities.
     pub fn clear(&mut self) {
         self.entities.clear();
         self.last = None;
     }
 
+    /// Mark a new entity as selected.
     pub fn insert(&mut self, entity: Entity) {
         self.entities.insert(entity);
         self.last = Some(entity);
     }
 
+    /// Unselect an entity.
     pub fn remove(&mut self, entity: Entity) {
         self.entities.remove(&entity);
 
@@ -29,31 +33,43 @@ impl SelectedEntities {
         }
     }
 
+    /// Checks if entity is selected.
     pub fn contains(&self, entity: Entity) -> bool {
         self.entities.contains(&entity)
     }
 
+    /// Returns all selected entities.
     pub fn entities(&self) -> &HashSet<Entity> {
         &self.entities
     }
 
+    /// Returns the last selected entity (if any).
     pub fn last(&self) -> Option<Entity> {
         self.last
     }
 }
 
+/// Enables mouse selection when attached to a UI element.
+/// * `G` represents the selection group of the entity.
+/// Entitites can be selected together only if they belong
+/// to the same selection group.
 #[derive(Copy, Clone, Debug)]
 pub struct Selectable<G>
 where
     G: Send + Sync + PartialEq + 'static,
 {
+    /// The order in which entities are selected
     pub order: u32,
+    /// The selection group to which the entity belongs
     pub multi_select_group: Option<G>,
+    /// Whether this UI element can be selected together with other
+    /// elements without needing to press the shift or control keys
     pub auto_multi_select: bool,
+    /// Whether to ignore inputs when this element is selected
     pub consumes_inputs: bool,
 }
 
-pub fn build_mouse_selection_system<T, G>(
+pub(crate) fn build_mouse_selection_system<T, G>(
     _world: &mut World,
     resources: &mut Resources,
 ) -> Box<dyn Schedulable>

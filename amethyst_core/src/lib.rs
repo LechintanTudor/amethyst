@@ -9,7 +9,6 @@ compile_error!("the cfg flag \"no_threading\" is required when building for emsc
 #[macro_use]
 extern crate getset;
 
-pub use alga;
 pub use approx;
 pub use nalgebra as math;
 pub use num_traits as num;

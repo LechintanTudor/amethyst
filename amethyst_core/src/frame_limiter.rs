@@ -67,13 +67,11 @@
 //! [`thread::yield_now`]: https://doc.rust-lang.org/std/thread/fn.yield_now.html
 //! [`thread::sleep`]: https://doc.rust-lang.org/stable/std/thread/fn.sleep.html
 
+use serde::{Deserialize, Serialize};
 use std::{
     thread::{sleep, yield_now},
     time::{Duration, Instant},
 };
-
-use derive_new::new;
-use serde::{Deserialize, Serialize};
 
 const ZERO: Duration = Duration::from_millis(0);
 
@@ -123,7 +121,7 @@ impl Default for FrameRateLimitStrategy {
 ///
 /// [`FrameLimiter`]: ./struct.FrameLimiter.html
 /// [`Config`]: ../../amethyst_config/trait.Config.html
-#[derive(Debug, Clone, Deserialize, Serialize, new)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct FrameRateLimitConfig {
     /// Frame rate limiting strategy.
     pub strategy: FrameRateLimitStrategy,
@@ -134,8 +132,17 @@ pub struct FrameRateLimitConfig {
 impl Default for FrameRateLimitConfig {
     fn default() -> Self {
         FrameRateLimitConfig {
-            fps: 144,
             strategy: Default::default(),
+            fps: 144,
+        }
+    }
+}
+
+impl FrameRateLimitConfig {
+    pub fn new(strategy: FrameRateLimitStrategy, fps: u32) -> Self {
+        Self {
+            strategy,
+            fps,
         }
     }
 }

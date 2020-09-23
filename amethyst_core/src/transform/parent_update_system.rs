@@ -27,6 +27,7 @@ pub fn build() -> impl Runnable {
                 if let Some(previous_parent_entity) = previous_parent.0 {
                     if let Some(previous_parent_children) = left
                         .entry_mut(previous_parent_entity)
+                        .ok()
                         .and_then(|entry| entry.into_component_mut::<Children>().ok())
                     {
                         log::trace!(" > Removing {:?} from it's prev parent's children", entity);
@@ -54,6 +55,7 @@ pub fn build() -> impl Runnable {
                     // Remove from `PreviousParent.Children`.
                     if let Some(previous_parent_children) = left
                         .entry_mut(previous_parent_entity)
+                        .ok()
                         .and_then(|entry| entry.into_component_mut::<Children>().ok())
                     {
                         log::trace!(" > Removing {:?} from prev parent's children", entity);
@@ -69,6 +71,7 @@ pub fn build() -> impl Runnable {
                 log::trace!("Adding {:?} to it's new parent {:?}", entity, parent.0);
                 if let Some(new_parent_children) = left
                     .entry_mut(parent.0)
+                    .ok()
                     .and_then(|entry| entry.into_component_mut::<Children>().ok())
                 {
                     // This is the parent

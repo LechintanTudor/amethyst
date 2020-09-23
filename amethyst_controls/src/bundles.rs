@@ -1,13 +1,10 @@
 use std::marker::PhantomData;
 
-use amethyst_core::{
-    bundle::SystemBundle,
-    ecs::prelude::{DispatcherBuilder, World},
-    math::one,
-    SystemDesc,
-};
+use amethyst_core::{ecs::*, math::one, shrev::EventChannel};
 use amethyst_error::Error;
 use amethyst_input::BindingTypes;
+
+use winit::Event;
 
 use super::*;
 
@@ -37,25 +34,25 @@ pub struct FlyControlBundle<T: BindingTypes> {
     sensitivity_x: f32,
     sensitivity_y: f32,
     speed: f32,
-    right_input_axis: Option<T::Axis>,
-    up_input_axis: Option<T::Axis>,
-    forward_input_axis: Option<T::Axis>,
+    horizontal_axis: Option<T::Axis>,
+    vertical_axis: Option<T::Axis>,
+    longitudinal_axis: Option<T::Axis>,
 }
 
 impl<T: BindingTypes> FlyControlBundle<T> {
     /// Builds a new fly control bundle using the provided axes as controls.
     pub fn new(
-        right_input_axis: Option<T::Axis>,
-        up_input_axis: Option<T::Axis>,
-        forward_input_axis: Option<T::Axis>,
+        horizontal_axis: Option<T::Axis>,
+        vertical_axis: Option<T::Axis>,
+        longitudinal_axis: Option<T::Axis>,
     ) -> Self {
         FlyControlBundle {
             sensitivity_x: 1.0,
             sensitivity_y: 1.0,
             speed: one(),
-            right_input_axis,
-            up_input_axis,
-            forward_input_axis,
+            horizontal_axis,
+            vertical_axis,
+            longitudinal_axis,
         }
     }
 
@@ -73,38 +70,43 @@ impl<T: BindingTypes> FlyControlBundle<T> {
     }
 }
 
-impl<'a, 'b, T: BindingTypes> SystemBundle<'a, 'b> for FlyControlBundle<T> {
-    fn build(
-        self,
-        world: &mut World,
-        builder: &mut DispatcherBuilder<'a, 'b>,
+impl<T: BindingTypes> SystemBundle for FlyControlBundle<T> {
+    fn load(
+        &mut self,
+        _world: &mut World,
+        resources: &mut Resources,
+        builder: &mut DispatcherBuilder,
     ) -> Result<(), Error> {
-        builder.add(
-            FlyMovementSystemDesc::<T>::new(
-                self.speed,
-                self.right_input_axis,
-                self.up_input_axis,
-                self.forward_input_axis,
-            )
-            .build(world),
-            "fly_movement",
-            &[],
-        );
-        builder.add(
-            FreeRotationSystemDesc::new(self.sensitivity_x, self.sensitivity_y).build(world),
-            "free_rotation",
-            &[],
-        );
-        builder.add(
-            MouseFocusUpdateSystemDesc::default().build(world),
-            "mouse_focus",
-            &["free_rotation"],
-        );
-        builder.add(
-            CursorHideSystemDesc::default().build(world),
-            "cursor_hide",
-            &["mouse_focus"],
-        );
+        builder.add_system(build_fly_movement_system::<T>(
+            self.speed,
+            self.horizontal_axis.clone(),
+            self.vertical_axis.clone(),
+            self.longitudinal_axis.clone(),
+        ));
+
+        let reader = resources
+            .get_mut::<EventChannel<Event>>()
+            .expect("Window event channel not found in resources")
+            .register_reader();
+
+        builder.add_system(build_free_rotation_system(
+            self.sensitivity_x,
+            self.sensitivity_y,
+            reader,
+        ));
+
+        resources.insert(WindowFocus::new());
+
+        let reader = resources
+            .get_mut::<EventChannel<Event>>()
+            .expect("Window event channel not found in resources")
+            .register_reader();
+
+        builder.add_system(build_mouse_focus_update_system(reader));
+
+        resources.insert(HideCursor::default());
+        builder.add_system(build_cursor_hide_system());
+
         Ok(())
     }
 }
@@ -147,28 +149,37 @@ impl<T: BindingTypes> Default for ArcBallControlBundle<T> {
     }
 }
 
-impl<'a, 'b, T: BindingTypes> SystemBundle<'a, 'b> for ArcBallControlBundle<T> {
-    fn build(
-        self,
-        world: &mut World,
-        builder: &mut DispatcherBuilder<'a, 'b>,
+impl<T: BindingTypes> SystemBundle for ArcBallControlBundle<T> {
+    fn load(
+        &mut self,
+        _world: &mut World,
+        resources: &mut Resources,
+        builder: &mut DispatcherBuilder,
     ) -> Result<(), Error> {
-        builder.add(ArcBallRotationSystem::default(), "arc_ball_rotation", &[]);
-        builder.add(
-            FreeRotationSystemDesc::new(self.sensitivity_x, self.sensitivity_y).build(world),
-            "free_rotation",
-            &[],
-        );
-        builder.add(
-            MouseFocusUpdateSystemDesc::default().build(world),
-            "mouse_focus",
-            &["free_rotation"],
-        );
-        builder.add(
-            CursorHideSystemDesc::default().build(world),
-            "cursor_hide",
-            &["mouse_focus"],
-        );
+        let reader = resources
+            .get_mut::<EventChannel<Event>>()
+            .expect("Window event channel not found in resources")
+            .register_reader();
+
+        builder.add_system(build_free_rotation_system(
+            self.sensitivity_x,
+            self.sensitivity_y,
+            reader,
+        ));
+        builder.add_system(build_arc_ball_rotation_system());
+
+        resources.insert(WindowFocus::new());
+
+        let reader = resources
+            .get_mut::<EventChannel<Event>>()
+            .expect("Window event channel not found in resources")
+            .register_reader();
+
+        builder.add_system(build_mouse_focus_update_system(reader));
+
+        resources.insert(HideCursor::default());
+        builder.add_system(build_cursor_hide_system());
+
         Ok(())
     }
 }

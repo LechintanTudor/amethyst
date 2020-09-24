@@ -1,23 +1,17 @@
 //! System that inserts [PreviousParent] components for entities that have [Transform] and [Parent]
 
+#![allow(missing_docs)]
+
 use super::components::*;
 use crate::ecs::*;
+use log::*;
 
-/// System that inserts [PreviousParent] components for entities that have [Transform] and [Parent]
-pub fn build() -> impl Runnable {
-    SystemBuilder::new("MissingPreviousParentSystem")
-        // Entities with missing `PreviousParent`
-        .with_query(
-            <(Entity, &Parent)>::query()
-                .filter(component::<Transform>() & !component::<PreviousParent>()),
-        )
-        .build(move |commands, world, _resource, query| {
-            // Add missing `PreviousParent` components
-            for (entity, _parent) in query.iter(world) {
-                log::trace!("Adding missing PreviousParent to {:?}", entity);
-                commands.add_component(*entity, PreviousParent(None));
-            }
-        })
+/// System that inserts `PreviousParent` components for entities that have `Transform` and `Parent`
+#[system(for_each)]
+#[filter(component::<Transform>() & component::<Parent>() & !component::<PreviousParent>())]
+pub fn missing_previous_parent(commands: &mut CommandBuffer, entity: &Entity) {
+    trace!("Adding missing PreviousParent to {:?}", entity);
+    commands.add_component(*entity, PreviousParent(None));
 }
 
 #[cfg(test)]

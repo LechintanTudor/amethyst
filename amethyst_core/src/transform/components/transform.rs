@@ -1,9 +1,7 @@
 //! Local transform component.
-use crate::{
-    math::{
-        self as na, Isometry3, Matrix4, Quaternion, RealField, Translation3, Unit, UnitQuaternion,
-        Vector3,
-    },
+use crate::math::{
+    self as na, Isometry3, Matrix4, Quaternion, RealField, Translation3, Unit, UnitQuaternion,
+    Vector3,
 };
 use serde::{Deserialize, Serialize};
 use simba::scalar::SubsetOf;

@@ -139,11 +139,9 @@ impl Default for FrameRateLimitConfig {
 }
 
 impl FrameRateLimitConfig {
+    /// Creates a new `FrameRateLimitConfig`.
     pub fn new(strategy: FrameRateLimitStrategy, fps: u32) -> Self {
-        Self {
-            strategy,
-            fps,
-        }
+        Self { strategy, fps }
     }
 }
 

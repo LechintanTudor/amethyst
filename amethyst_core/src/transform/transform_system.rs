@@ -1,70 +1,71 @@
 //! System that updates global transform matrices based on hierarchy relations.
 
+#![allow(missing_docs)]
+
 use super::components::*;
 use crate::ecs::*;
 
 #[cfg(feature = "profiler")]
 use thread_profiler::profile_scope;
 
-/// System that updates global transform matrices based on hierarchy relations.
-pub fn build() -> impl Runnable {
-    SystemBuilder::new("TransformSystem")
-        // Entities at the hierarchy root (no parent component)
-        .with_query(
-            <(Entity, &mut Transform)>::query().filter(maybe_changed::<Transform>() & !component::<Parent>()),
-        )
-        // Entities that are children of some entity
-        .with_query(
-            <(Entity, &mut Transform)>::query().filter(maybe_changed::<Transform>() & component::<Parent>()),
-        )
-        .with_query(<(Entity, &Parent)>::query())
-        .write_component::<Transform>()
-        .build(
-            move |_commands, world, _resource, (query_root, query_children, query_parent)| {
-                // Update global transform for entities that are root of the hierarchy
-                for (entity, transform) in query_root.iter_mut(world) {
-                    transform.global_matrix = transform.matrix();
-                    debug_assert!(
-                        transform.is_finite(),
-                        format!(
-                            "Entity {:?} had a non-finite `Transform` {:?}",
-                            entity, transform
-                        )
-                    );
-                }
+/// System that updates global transform matrices based on hierarchy relations
+#[system]
+#[write_component(Transform)]
+pub fn transform(world: &mut SubWorld<'_>) {
+    // Entities at the hierarchy root (no `Parent` component)
+    let mut root_query = <(Entity, &mut Transform)>::query()
+        .filter(!component::<Parent>() & maybe_changed::<Transform>());
 
-                // Update parent transforms for entities in the hierarchy
-                let (left, mut right) = world.split_for_query(query_parent);
-                for (entity, parent) in query_parent.iter(&left) {
-                    let parent_matrix = right
-                        .entry_ref(**parent)
-                        .unwrap()
-                        .into_component::<Transform>()
-                        .unwrap()
-                        .global_matrix;
+    // Entities that are children of some entity
+    let mut children_query = <(Entity, &mut Transform)>::query()
+        .filter(component::<Parent>() & maybe_changed::<Transform>());
 
-                    right
-                        .entry_mut(*entity)
-                        .ok()
-                        .and_then(|entry| entry.into_component_mut::<Transform>().ok())
-                        .map(|transform| {
-                            transform.parent_matrix = parent_matrix;
-                        });
-                }
+    // Entities with a `Parent` component
+    let mut parent_query = <(Entity, &Parent)>::query();
 
-                // Update global transform for entities that are children of some entity
-                for (entity, transform) in query_children.iter_mut(world) {
-                    transform.global_matrix = transform.parent_matrix * transform.matrix();
-                    debug_assert!(
-                        transform.is_finite(),
-                        format!(
-                            "Entity {:?} had a non-finite `Transform` {:?}",
-                            entity, transform
-                        )
-                    );
-                }
-            },
-        )
+    // Update global transform for entities that are root of the hierarchy
+    for (entity, transform) in root_query.iter_mut(world) {
+        transform.global_matrix = transform.matrix();
+        debug_assert!(
+            transform.is_finite(),
+            format!(
+                "Entity {:?} had a non-finite `Transform` {:?}",
+                entity, transform
+            )
+        );
+    }
+
+    // Update parent transforms for entities in the hierarchy
+    let (left, mut right) = world.split_for_query(&parent_query);
+
+    for (entity, parent) in parent_query.iter(&left) {
+        let parent_matrix = right
+            .entry_ref(**parent)
+            .unwrap()
+            .into_component::<Transform>()
+            .unwrap()
+            .global_matrix;
+
+        right
+            .entry_mut(*entity)
+            .ok()
+            .and_then(|entry| entry.into_component_mut::<Transform>().ok())
+            .map(|transform| {
+                transform.parent_matrix = parent_matrix;
+            });
+    }
+
+    // Update global transform for entities that are children of some entity
+    for (entity, transform) in children_query.iter_mut(world) {
+        transform.global_matrix = transform.parent_matrix * transform.matrix();
+        debug_assert!(
+            transform.is_finite(),
+            format!(
+                "Entity {:?} had a non-finite `Transform` {:?}",
+                entity, transform
+            )
+        );
+    }
 }
 
 #[cfg(test)]

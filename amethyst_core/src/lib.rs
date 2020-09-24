@@ -53,7 +53,7 @@ pub mod ecs {
 mod axis;
 mod event;
 mod hidden;
-//mod hide_system;
+// mod hide_system;
 mod named;
 
 /// A rayon thread pool wrapped in an `Arc`. This should be used as resource in `World`.

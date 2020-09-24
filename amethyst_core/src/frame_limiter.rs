@@ -15,28 +15,6 @@
 //! By default, amethyst will set the maximum frame rate to 144 fps, and will use a yield-only
 //! limiting strategy.
 //!
-//! # Examples
-//!
-//! ```
-//! use std::time::Duration;
-//!
-//! use amethyst::prelude::*;
-//! use amethyst::core::frame_limiter::FrameRateLimitStrategy;
-//!
-//! # struct GameState;
-//! # impl SimpleState for GameState {}
-//! # fn main() -> amethyst::Result<()> {
-//! let assets_dir = "./";
-//! let mut game = Application::build(assets_dir, GameState)?
-//!     .with_frame_limit(
-//!         FrameRateLimitStrategy::SleepAndYield(Duration::from_millis(2)),
-//!         144,
-//!     )
-//!     .build(GameDataBuilder::new())?;
-//! # Ok(())
-//! # }
-//! ```
-//!
 //! # Frame Rate Limiting Strategies
 //!
 //! The four possible strategies described by [`FrameRateLimitStrategy`] are as follows:
@@ -109,15 +87,6 @@ impl Default for FrameRateLimitStrategy {
 ///
 /// Provides the configuration for a [`FrameLimiter`] using a configuration file. The config
 /// file can be loaded using the methods of the [`Config`] trait.
-///
-/// # Examples
-///
-/// ```no_run
-/// use amethyst::prelude::*;
-/// use amethyst::core::frame_limiter::FrameRateLimitConfig;
-///
-/// let config = FrameRateLimitConfig::load("./config/frame_limiter.ron");
-/// ```
 ///
 /// [`FrameLimiter`]: ./struct.FrameLimiter.html
 /// [`Config`]: ../../amethyst_config/trait.Config.html

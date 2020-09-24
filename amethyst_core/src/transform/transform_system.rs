@@ -92,11 +92,11 @@ mod tests {
     }
 
     fn transform_world() -> (Resources, World, Dispatcher) {
+        let mut world = World::default();
         let mut resources = Resources::default();
-        let mut world = Universe::new().create_world();
 
         let dispatcher = DispatcherBuilder::default()
-            .add_bundle(TransformBundle)
+            .add_bundle(TransformBundle::default())
             .build(&mut world, &mut resources)
             .unwrap();
 

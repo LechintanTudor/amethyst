@@ -139,17 +139,17 @@ pub fn parent_update(commands: &mut CommandBuffer, world: &mut SubWorld<'_>) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::transform::missing_previous_parent_system;
+    use crate::transform::systems::missing_previous_parent_system;
 
     #[test]
     fn correct_children() {
+        let mut world = World::default();
         let mut resources = Resources::default();
-        let mut world = Universe::new().create_world();
 
         let mut schedule = Schedule::builder()
-            .add_system(missing_previous_parent_system::build())
+            .add_system(missing_previous_parent_system())
             .flush()
-            .add_system(build())
+            .add_system(parent_update_system())
             .build();
 
         // Add parent entities

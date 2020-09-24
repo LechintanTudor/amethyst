@@ -20,15 +20,14 @@ mod test {
 
     #[test]
     fn previous_parent_added() {
+        let mut world = World::default();
         let mut resources = Resources::default();
-        let mut world = Universe::new().create_world();
-
-        let mut schedule = Schedule::builder().add_system(build()).build();
+        let mut schedule = Schedule::builder()
+            .add_system(missing_previous_parent_system())
+            .build();
 
         let e1 = world.push((Transform::default(),));
-
         let e2 = world.push((Transform::default(), Parent(e1)));
-
         schedule.execute(&mut world, &mut resources);
 
         assert_eq!(
